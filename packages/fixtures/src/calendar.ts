@@ -43,7 +43,8 @@ export const pilotCalendarTasks: PilotCalendarTask[] = [
     month: "November",
     season: "rainy",
     taskType: "weeding",
-    summary: "Carry out early weeding and field cleaning while crops establish.",
+    summary:
+      "Carry out early weeding and field cleaning while crops establish.",
     sourceStatus: "estimated",
   },
   {
@@ -59,7 +60,8 @@ export const pilotCalendarTasks: PilotCalendarTask[] = [
     month: "January",
     season: "dry",
     taskType: "harvest",
-    summary: "Harvest early-maturing crops and store produce for household use.",
+    summary:
+      "Harvest early-maturing crops and store produce for household use.",
     sourceStatus: "estimated",
   },
   {
@@ -115,7 +117,8 @@ export const pilotCalendarTasks: PilotCalendarTask[] = [
     month: "August",
     season: "rainy",
     taskType: "threshing",
-    summary: "Finish threshing and post-harvest handling before storage or sale.",
+    summary:
+      "Finish threshing and post-harvest handling before storage or sale.",
     sourceStatus: "estimated",
   },
 ];
