@@ -157,6 +157,49 @@ describe("shouldEscalateQuestion", () => {
     });
   });
 
+  it("escalates exact reapplication timing questions even with reviewed content", () => {
+    const input: ConsultationQuestion = {
+      text: "Quando volto a aplicar?",
+      hasReviewedAnswer: true,
+    };
+
+    expect(shouldEscalateQuestion(input)).toEqual({
+      shouldEscalate: true,
+      reason: "chemical_or_dosage_risk",
+      matchedRiskTerms: ["aplicar"],
+    });
+  });
+
+  it("escalates exact harvest waiting-period questions even with reviewed content", () => {
+    const input: ConsultationQuestion = {
+      text: "Quanto tempo devo esperar antes da colheita?",
+      hasReviewedAnswer: true,
+    };
+
+    expect(shouldEscalateQuestion(input)).toEqual({
+      shouldEscalate: true,
+      reason: "chemical_or_dosage_risk",
+      matchedRiskTerms: [
+        "antes da colheita",
+        "esperar antes da colheita",
+        "colheita",
+      ],
+    });
+  });
+
+  it("escalates exact parcel re-entry questions even with reviewed content", () => {
+    const input: ConsultationQuestion = {
+      text: "Posso entrar na parcela amanha?",
+      hasReviewedAnswer: true,
+    };
+
+    expect(shouldEscalateQuestion(input)).toEqual({
+      shouldEscalate: true,
+      reason: "chemical_or_dosage_risk",
+      matchedRiskTerms: ["entrar na parcela", "parcela"],
+    });
+  });
+
   it("escalates insecticide mixing and spray-burn risk", () => {
     const input: ConsultationQuestion = {
       text: "Misturei insecticida na calda e agora as folhas tem queimaduras. O que faco?",
