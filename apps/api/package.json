@@ -1,0 +1,32 @@
+{
+  "name": "@ndjar/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "prettier --check \"src/**/*.ts\""
+  },
+  "dependencies": {
+    "@ndjar/database": "workspace:*",
+    "@ndjar/domain": "workspace:*",
+    "@ndjar/fixtures": "workspace:*",
+    "@nestjs/common": "^11.1.9",
+    "@nestjs/core": "^11.1.9",
+    "@nestjs/platform-express": "^11.1.9",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^4.2.1"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^11.1.9",
+    "@types/node": "^24.0.15",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.1.4",
+    "tsx": "^4.23.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
