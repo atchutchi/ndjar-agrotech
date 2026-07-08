@@ -320,6 +320,6 @@ Run: `git add README.md docs && git commit -m "docs: update project status"`
 
 - [ ] **Step 4: Push**
 
-Run: `git push -u origin main`
+Run: `git push -u origin agent/mvp-foundation`
 
-Expected: GitHub receives the latest commits.
+Expected: GitHub receives the latest implementation branch.
