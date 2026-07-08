@@ -155,7 +155,7 @@ export const users = pgTable("users", {
     .notNull(),
   preferredLanguage: text("preferred_language").default("pt").notNull(),
   phoneNumberHash: text("phone_number_hash"),
-  communityId: text("community_id"),
+  communityId: text("community_id").references(() => communities.id),
   isActive: boolean("is_active").default(true).notNull(),
   ...offlineSyncColumns(),
   ...timestampColumns(),

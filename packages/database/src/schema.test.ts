@@ -11,6 +11,7 @@ import {
   regions,
   soilSamples,
   sourceStatusEnum,
+  ussdSessions,
 } from "./schema.js";
 
 describe("database schema", () => {
@@ -32,5 +33,8 @@ describe("database schema", () => {
     expect(communities).toHaveProperty("syncVersion");
     expect(soilSamples).toHaveProperty("offlineClientId");
     expect(calendarTasks).toHaveProperty("lastSyncedAt");
+    expect(ussdSessions).toHaveProperty("route");
+    expect(ussdSessions).toHaveProperty("currentScreen");
+    expect(ussdSessions).toHaveProperty("status");
   });
 });
