@@ -1,0 +1,33 @@
+{
+  "name": "@ndjar/database",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/schema.ts",
+      "default": "./src/schema.ts"
+    },
+    "./seed": {
+      "types": "./src/seed.ts",
+      "default": "./src/seed.ts"
+    }
+  },
+  "types": "./src/schema.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "prettier --check \"src/**/*.ts\" \"drizzle.config.ts\""
+  },
+  "dependencies": {
+    "@ndjar/domain": "workspace:*",
+    "@ndjar/fixtures": "workspace:*",
+    "drizzle-orm": "^0.44.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.15",
+    "drizzle-kit": "^0.31.7",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
