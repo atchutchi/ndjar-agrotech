@@ -16,7 +16,7 @@ Thumbs.db
 ._*
 tmp/
 temp/
-.worktrees/
+.worktrees
 *.apk
 *.aab
 *.ipa
