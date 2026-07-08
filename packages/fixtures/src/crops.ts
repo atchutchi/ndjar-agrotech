@@ -1,5 +1,8 @@
 import type { AgronomicSourceStatus } from "@ndjar/domain";
 
+type FieldObservedStatus = Extract<AgronomicSourceStatus, "field_observed">;
+type EstimatedStatus = Extract<AgronomicSourceStatus, "estimated">;
+
 export interface CropProductionEvidence {
   annualBags: {
     minimum: number;
@@ -16,41 +19,92 @@ export interface CropAgronomicNote {
   sourceStatus: AgronomicSourceStatus;
 }
 
+export interface CropPresenceByCommunityGroup {
+  id: string;
+  communityIds: string[];
+  sourceStatus: FieldObservedStatus;
+}
+
+export interface CropPresenceByCommunity {
+  communityId: string;
+  sourceStatus: EstimatedStatus;
+  sourceGroupId: string;
+}
+
 export interface PilotCrop {
   id: string;
   label: string;
-  observedInCommunityIds: string[];
+  presenceByCommunityGroup: CropPresenceByCommunityGroup[];
+  presenceByCommunity: CropPresenceByCommunity[];
   sourceStatus: AgronomicSourceStatus;
   productionEvidence?: CropProductionEvidence;
   agronomicNotes: CropAgronomicNote[];
+}
+
+const sareDonhaCropPresence: CropPresenceByCommunityGroup = {
+  id: "sare-donha-crop-presence",
+  communityIds: ["sare-donha-1", "sare-donha-2"],
+  sourceStatus: "field_observed",
+};
+
+const uaneUguiCropPresence: CropPresenceByCommunityGroup = {
+  id: "uane-ugui-crop-presence",
+  communityIds: ["uane", "ugui"],
+  sourceStatus: "field_observed",
+};
+
+function expandEstimatedCommunityPresence(
+  groups: CropPresenceByCommunityGroup[],
+): CropPresenceByCommunity[] {
+  return groups.flatMap((group) =>
+    group.communityIds.map((communityId) => ({
+      communityId,
+      sourceStatus: "estimated",
+      sourceGroupId: group.id,
+    })),
+  );
 }
 
 export const pilotCrops: PilotCrop[] = [
   {
     id: "arroz",
     label: "Arroz",
-    observedInCommunityIds: ["sare-donha-1", "sare-donha-2"],
+    presenceByCommunityGroup: [sareDonhaCropPresence],
+    presenceByCommunity: expandEstimatedCommunityPresence([
+      sareDonhaCropPresence,
+    ]),
     sourceStatus: "field_observed",
     agronomicNotes: [],
   },
   {
     id: "abobora",
     label: "Abobora",
-    observedInCommunityIds: ["sare-donha-1", "sare-donha-2"],
+    presenceByCommunityGroup: [sareDonhaCropPresence],
+    presenceByCommunity: expandEstimatedCommunityPresence([
+      sareDonhaCropPresence,
+    ]),
     sourceStatus: "field_observed",
     agronomicNotes: [],
   },
   {
     id: "inhame",
     label: "Inhame",
-    observedInCommunityIds: ["sare-donha-1", "sare-donha-2", "uane", "ugui"],
+    presenceByCommunityGroup: [sareDonhaCropPresence, uaneUguiCropPresence],
+    presenceByCommunity: expandEstimatedCommunityPresence([
+      sareDonhaCropPresence,
+      uaneUguiCropPresence,
+    ]),
     sourceStatus: "field_observed",
     agronomicNotes: [],
   },
   {
     id: "mandioca",
     label: "Mandioca",
-    observedInCommunityIds: ["sare-donha-1", "sare-donha-2", "uane", "ugui"],
+    presenceByCommunityGroup: [sareDonhaCropPresence, uaneUguiCropPresence],
+    presenceByCommunity: expandEstimatedCommunityPresence([
+      sareDonhaCropPresence,
+      uaneUguiCropPresence,
+    ]),
     sourceStatus: "field_observed",
     productionEvidence: {
       annualBags: {
@@ -72,35 +126,52 @@ export const pilotCrops: PilotCrop[] = [
   {
     id: "milho",
     label: "Milho",
-    observedInCommunityIds: ["sare-donha-1", "sare-donha-2", "uane", "ugui"],
+    presenceByCommunityGroup: [sareDonhaCropPresence, uaneUguiCropPresence],
+    presenceByCommunity: expandEstimatedCommunityPresence([
+      sareDonhaCropPresence,
+      uaneUguiCropPresence,
+    ]),
     sourceStatus: "field_observed",
     agronomicNotes: [],
   },
   {
     id: "feijao",
     label: "Feijao",
-    observedInCommunityIds: ["sare-donha-1", "sare-donha-2", "uane", "ugui"],
+    presenceByCommunityGroup: [sareDonhaCropPresence, uaneUguiCropPresence],
+    presenceByCommunity: expandEstimatedCommunityPresence([
+      sareDonhaCropPresence,
+      uaneUguiCropPresence,
+    ]),
     sourceStatus: "field_observed",
     agronomicNotes: [],
   },
   {
     id: "candja",
     label: "Candja",
-    observedInCommunityIds: ["sare-donha-1", "sare-donha-2"],
+    presenceByCommunityGroup: [sareDonhaCropPresence],
+    presenceByCommunity: expandEstimatedCommunityPresence([
+      sareDonhaCropPresence,
+    ]),
     sourceStatus: "field_observed",
     agronomicNotes: [],
   },
   {
     id: "badjiqui",
     label: "Badjiqui",
-    observedInCommunityIds: ["sare-donha-1", "sare-donha-2"],
+    presenceByCommunityGroup: [sareDonhaCropPresence],
+    presenceByCommunity: expandEstimatedCommunityPresence([
+      sareDonhaCropPresence,
+    ]),
     sourceStatus: "field_observed",
     agronomicNotes: [],
   },
   {
     id: "batata-doce",
     label: "Batata-doce",
-    observedInCommunityIds: ["uane", "ugui"],
+    presenceByCommunityGroup: [uaneUguiCropPresence],
+    presenceByCommunity: expandEstimatedCommunityPresence([
+      uaneUguiCropPresence,
+    ]),
     sourceStatus: "field_observed",
     agronomicNotes: [],
   },
