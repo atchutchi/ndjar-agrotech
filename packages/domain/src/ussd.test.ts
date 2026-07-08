@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildUssdSessionState } from "./index";
+import { buildUssdSessionState } from "./index.js";
 
 describe("buildUssdSessionState", () => {
   it("preserves deterministic menu progress for future USSD sessions", () => {

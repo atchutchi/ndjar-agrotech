@@ -1,4 +1,4 @@
-import type { AgronomicSourceStatus } from "./agronomy";
+import type { AgronomicSourceStatus } from "./agronomy.js";
 
 export type OfflineEntity =
   | "library"

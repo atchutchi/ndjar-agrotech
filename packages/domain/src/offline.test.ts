@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveOfflineSyncStrategy } from "./index";
+import { resolveOfflineSyncStrategy } from "./index.js";
 
 describe("resolveOfflineSyncStrategy", () => {
   it("prefers server data for validated agronomic content", () => {

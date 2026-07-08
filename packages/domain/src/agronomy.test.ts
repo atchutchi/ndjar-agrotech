@@ -5,7 +5,7 @@ import {
   createSampleRecord,
   shouldEscalateQuestion,
   type ConsultationQuestion,
-} from "./index";
+} from "./index.js";
 
 describe("classifyPhValue", () => {
   it("classifies values below 5.6 as acidic", () => {
@@ -76,6 +76,61 @@ describe("shouldEscalateQuestion", () => {
       shouldEscalate: true,
       reason: "chemical_or_dosage_risk",
       matchedRiskTerms: ["dose", "ureia"],
+    });
+  });
+
+  it("escalates pesticide and herbicide questions even with reviewed content", () => {
+    const input: ConsultationQuestion = {
+      text: "Posso usar pesticida e herbicida na mesma semana na mandioca?",
+      hasReviewedAnswer: true,
+    };
+
+    expect(shouldEscalateQuestion(input)).toEqual({
+      shouldEscalate: true,
+      reason: "chemical_or_dosage_risk",
+      matchedRiskTerms: ["pesticid", "herbicid"],
+    });
+  });
+
+  it("escalates chemical dosage questions with explicit chemical wording", () => {
+    const input: ConsultationQuestion = {
+      text: "Qual a dosagem deste químico para o tomate?",
+      hasReviewedAnswer: true,
+    };
+
+    expect(shouldEscalateQuestion(input)).toEqual({
+      shouldEscalate: true,
+      reason: "chemical_or_dosage_risk",
+      matchedRiskTerms: ["dosagem", "quimic"],
+    });
+  });
+
+  it("escalates insecticide mixing and spray-burn risk", () => {
+    const input: ConsultationQuestion = {
+      text: "Misturei insecticida na calda e agora as folhas têm queimaduras. O que faço?",
+    };
+
+    expect(shouldEscalateQuestion(input)).toEqual({
+      shouldEscalate: true,
+      reason: "chemical_or_dosage_risk",
+      matchedRiskTerms: ["insecticid", "queimad", "misturei", "calda"],
+    });
+  });
+
+  it("escalates toxicity and poison questions with unknown products", () => {
+    const input: ConsultationQuestion = {
+      text: "Este produto desconhecido parece veneno tóxico e está sem rótulo. Posso aplicar?",
+    };
+
+    expect(shouldEscalateQuestion(input)).toEqual({
+      shouldEscalate: true,
+      reason: "chemical_or_dosage_risk",
+      matchedRiskTerms: [
+        "toxic",
+        "veneno",
+        "produto desconhecido",
+        "sem rotulo",
+      ],
     });
   });
 

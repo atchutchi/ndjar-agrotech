@@ -1,17 +1,33 @@
 const CHEMICAL_OR_DOSAGE_TERMS = [
   "dose",
   "dosagem",
-  "ureia",
+  "dosar",
+  "quantidade",
+  "pesticid",
+  "herbicid",
+  "insecticid",
+  "inseticid",
+  "fungicid",
   "quimic",
-  "fertiliz",
+  "toxic",
+  "veneno",
+  "queimad",
+  "mistura",
   "misturar",
+  "misturei",
+  "calda",
+  "combinar",
+  "produto desconhecido",
+  "sem rotulo",
+  "ureia",
+  "fertiliz",
 ] as const;
 const SEVERE_PEST_TERMS = [
   "praga grave",
   "infest",
   "morrer",
   "doenca grave",
-  "fungicida",
+  "doença grave",
 ] as const;
 
 export interface ConsultationQuestion {
