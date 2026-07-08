@@ -1,8 +1,26 @@
-const CHEMICAL_OR_DOSAGE_TERMS = [
+const OPERATIONAL_RISK_TERMS = [
+  "produto",
+  "tratament",
+  "remedio",
+  "remedi",
+  "aplicar",
+  "apliquei",
+  "usar",
+  "uso",
+  "pulveriz",
+  "comprar",
+  "mistura",
+  "misturar",
+  "misturei",
+  "folhas queimad",
+  "intoxic",
+  "veneno",
   "dose",
   "dosagem",
   "dosar",
   "quantidade",
+  "adubo",
+  "calagem",
   "pesticid",
   "herbicid",
   "insecticid",
@@ -10,11 +28,7 @@ const CHEMICAL_OR_DOSAGE_TERMS = [
   "fungicid",
   "quimic",
   "toxic",
-  "veneno",
   "queimad",
-  "mistura",
-  "misturar",
-  "misturei",
   "calda",
   "combinar",
   "produto desconhecido",
@@ -65,7 +79,7 @@ export function shouldEscalateQuestion(
   input: ConsultationQuestion,
 ): EscalationDecision {
   const normalizedText = normalizeText(input.text);
-  const chemicalMatches = matchTerms(normalizedText, CHEMICAL_OR_DOSAGE_TERMS);
+  const chemicalMatches = matchTerms(normalizedText, OPERATIONAL_RISK_TERMS);
 
   if (chemicalMatches.length > 0) {
     return {
@@ -96,6 +110,6 @@ export function shouldEscalateQuestion(
   return {
     shouldEscalate: true,
     reason: "no_safe_answer",
-    matchedRiskTerms: matchTerms(normalizedText, CHEMICAL_OR_DOSAGE_TERMS),
+    matchedRiskTerms: [],
   };
 }

@@ -75,7 +75,7 @@ describe("shouldEscalateQuestion", () => {
     expect(shouldEscalateQuestion(input)).toEqual({
       shouldEscalate: true,
       reason: "chemical_or_dosage_risk",
-      matchedRiskTerms: ["dose", "ureia"],
+      matchedRiskTerms: ["aplicar", "dose", "ureia"],
     });
   });
 
@@ -88,13 +88,13 @@ describe("shouldEscalateQuestion", () => {
     expect(shouldEscalateQuestion(input)).toEqual({
       shouldEscalate: true,
       reason: "chemical_or_dosage_risk",
-      matchedRiskTerms: ["pesticid", "herbicid"],
+      matchedRiskTerms: ["usar", "pesticid", "herbicid"],
     });
   });
 
   it("escalates chemical dosage questions with explicit chemical wording", () => {
     const input: ConsultationQuestion = {
-      text: "Qual a dosagem deste químico para o tomate?",
+      text: "Qual a dosagem deste quimico para o tomate?",
       hasReviewedAnswer: true,
     };
 
@@ -105,29 +105,83 @@ describe("shouldEscalateQuestion", () => {
     });
   });
 
-  it("escalates insecticide mixing and spray-burn risk", () => {
+  it("escalates unknown product questions even when phrased indirectly", () => {
     const input: ConsultationQuestion = {
-      text: "Misturei insecticida na calda e agora as folhas têm queimaduras. O que faço?",
+      text: "Nao sei que produto e este, posso usar?",
+      hasReviewedAnswer: true,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
       shouldEscalate: true,
       reason: "chemical_or_dosage_risk",
-      matchedRiskTerms: ["insecticid", "queimad", "misturei", "calda"],
+      matchedRiskTerms: ["produto", "usar"],
+    });
+  });
+
+  it("escalates treatment burn reports after application", () => {
+    const input: ConsultationQuestion = {
+      text: "As folhas ficaram queimadas depois do tratamento. O que faco?",
+      hasReviewedAnswer: true,
+    };
+
+    expect(shouldEscalateQuestion(input)).toEqual({
+      shouldEscalate: true,
+      reason: "chemical_or_dosage_risk",
+      matchedRiskTerms: ["tratament", "queimad"],
+    });
+  });
+
+  it("escalates mixing questions even when the products are not named", () => {
+    const input: ConsultationQuestion = {
+      text: "Posso misturar dois produtos?",
+      hasReviewedAnswer: true,
+    };
+
+    expect(shouldEscalateQuestion(input)).toEqual({
+      shouldEscalate: true,
+      reason: "chemical_or_dosage_risk",
+      matchedRiskTerms: ["produto", "mistura", "misturar"],
+    });
+  });
+
+  it("escalates spray dosage questions with operational wording", () => {
+    const input: ConsultationQuestion = {
+      text: "Qual e a dose para pulverizar?",
+      hasReviewedAnswer: true,
+    };
+
+    expect(shouldEscalateQuestion(input)).toEqual({
+      shouldEscalate: true,
+      reason: "chemical_or_dosage_risk",
+      matchedRiskTerms: ["pulveriz", "dose"],
+    });
+  });
+
+  it("escalates insecticide mixing and spray-burn risk", () => {
+    const input: ConsultationQuestion = {
+      text: "Misturei insecticida na calda e agora as folhas tem queimaduras. O que faco?",
+    };
+
+    expect(shouldEscalateQuestion(input)).toEqual({
+      shouldEscalate: true,
+      reason: "chemical_or_dosage_risk",
+      matchedRiskTerms: ["misturei", "insecticid", "queimad", "calda"],
     });
   });
 
   it("escalates toxicity and poison questions with unknown products", () => {
     const input: ConsultationQuestion = {
-      text: "Este produto desconhecido parece veneno tóxico e está sem rótulo. Posso aplicar?",
+      text: "Este produto desconhecido parece veneno toxico e esta sem rotulo. Posso aplicar?",
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
       shouldEscalate: true,
       reason: "chemical_or_dosage_risk",
       matchedRiskTerms: [
-        "toxic",
+        "produto",
+        "aplicar",
         "veneno",
+        "toxic",
         "produto desconhecido",
         "sem rotulo",
       ],
@@ -136,7 +190,7 @@ describe("shouldEscalateQuestion", () => {
 
   it("escalates serious pest questions", () => {
     const input: ConsultationQuestion = {
-      text: "A minha lavoura está a morrer com uma praga grave. O que faço agora?",
+      text: "A minha lavoura esta a morrer com uma praga grave. O que faco agora?",
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
