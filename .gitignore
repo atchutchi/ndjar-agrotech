@@ -16,6 +16,7 @@ Thumbs.db
 ._*
 tmp/
 temp/
+.worktrees/
 *.apk
 *.aab
 *.ipa
@@ -24,4 +25,3 @@ temp/
 *.p8
 *.p12
 *.mobileprovision
-
