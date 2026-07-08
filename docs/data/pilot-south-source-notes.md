@@ -1,71 +1,77 @@
 # Southern Pilot Source Notes
 
-## Pilot Scope
+## Source Bundle
 
-The MVP starts with a controlled southern pilot:
+These fixtures are derived from two local source groups already mapped in the repository:
 
-- Region: Quinara.
-- Sector: Buba.
-- Communities: Sare Donha 1, Sare Donha 2, Uane and Ugui.
+1. Participatory diagnosis reports for the southern pilot.
+2. Agricultural calendar spreadsheets used as early content structure.
 
-This scope is supported by the participatory diagnosis material and should be used before expanding to other regions.
+No legal, identity, banking or private household documents are used for these fixtures.
 
-## Field Observations
+## Fixture Coverage
 
-Sare Donha 1 and 2 are described with 32 hectares, divided into 2 hectare parcels.
+`packages/fixtures/src/pilot-south.ts`
 
-Observed crops in Sare Donha include arroz, abobora, inhame, mandioca, milho, feijao, candja and badjiqui.
+This file covers the pilot scope for Quinara, Buba, Sare Donha 1, Sare Donha 2, Uane and Ugui.
 
-Uane and Ugui are described with 48 hectares, also divided into 2 hectare parcels.
+The reports support a cautious split of the reported area into community records:
 
-Observed crops in Uane and Ugui include inhame, mandioca, milho, feijao and batata-doce.
+- Sare Donha 1 and Sare Donha 2 together represent 32 hectares with 2 hectare parcels.
+- Uane and Ugui together represent 48 hectares with 2 hectare parcels.
 
-The diagnosis says the production is organic and uses no chemicals.
+Because the brief does not validate a per-community distribution beyond those grouped totals, the fixture stores a balanced split inside each grouped pair and treats the geographic scope itself as `field_observed`.
 
-One concrete issue appears in the diagnosis: mandioca in one Sare Donha parcel no longer produces as it did before.
+The production model is recorded as organic with no chemicals reported and stays at `field_observed`.
 
-The diagnosis mentions more than 20 bags of 200 kg of mandioca per year for sale and local consumption. Other crops are not quantified.
+The pH fixture is intentionally not validated. It exists only to exercise the domain type path and to keep pH confidence visible in the app. The sample therefore uses `example` status and `unknown` method. It must not be interpreted as laboratory evidence.
 
-## Recommended MVP Data Status
+`packages/fixtures/src/crops.ts`
 
-Use these source statuses:
+Observed crops for Sare Donha 1 and 2 are arroz, abobora, inhame, mandioca, milho, feijao, candja and badjiqui.
 
-- `example` for prototype-only values.
-- `estimated` for values inferred from documents without lab proof.
-- `field_observed` for diagnosis observations.
-- `self_reported` for producer-reported production, area or history.
-- `lab_validated` for future laboratory pH results.
-- `consultant_reviewed` for recommendations reviewed by an agricultural doctor.
+Observed crops for Uane and Ugui are inhame, mandioca, milho, feijao and batata-doce.
 
-## pH Rules
+Those crop presences are stored as `field_observed`.
 
-Educational content can explain that pH 7 is neutral, below 5.6 is acidic, above 7 is alkaline, and 5.6 to 6.5 is generally favourable for nutrient availability.
+The mandioca production note of more than 20 bags of 200 kg per year for sale and local consumption is stored as `self_reported` production evidence, not `lab_validated`.
 
-The app must not turn this into crop-specific recommendation without validated source, region, crop and method.
+The note that one Sare Donha parcel no longer yields mandioca as before is stored as `field_observed`.
 
-The pH method must be stored. pH in water and pH in calcium chloride can differ.
+`packages/fixtures/src/calendar.ts`
 
-## Calendar Rules
+The calendar follows the required September to August cycle.
 
-The existing calendar structure is useful for UX and initial content:
+Its season and task sequencing comes from the existing pilot calendar structure:
 
-- Rainy months.
-- Dry months.
-- Soil preparation.
-- Planting.
-- Weeding.
-- Harvest.
-- Threshing.
+- rainy months
+- dry months
+- preparation
+- planting
+- weeding
+- harvest
+- threshing
 
-Calendar content must be marked as pilot or estimated until validated by crop and zone.
+The fixture does not claim crop-specific or zone-specific validation. Every calendar entry therefore remains `estimated`.
+
+## Source Status Rules
+
+Use these statuses consistently:
+
+- `field_observed` for participatory diagnosis observations
+- `self_reported` for producer-reported production quantities or history
+- `estimated` for inferred or placeholder agronomic values without sampling proof
+- `example` only for prototype-only content not grounded in the pilot material
+- `lab_validated` only when a real sample, method and laboratory result exist
+- `consultant_reviewed` only when an agricultural specialist has reviewed the content
 
 ## Data Risks
 
 Do not reduce agricultural aptitude to pH only.
 
-Agricultural aptitude can depend on drainage, salinity, texture, fertility, organic matter, soil depth, water access, rain timing and pest pressure.
+Agricultural aptitude also depends on drainage, salinity, texture, fertility, organic matter, soil depth, water access, rain timing and pest pressure.
 
-Do not show pH as final when sample ID, date, coordinates, depth, method, lab and responsible technician are missing.
+Do not present pH as final when sample ID, date, coordinates, depth, method, laboratory and responsible technician are missing.
 
-Do not allow AI or forum replies to provide unsafe agricultural advice without reviewed content or human escalation.
+Do not let AI or forum content give unsafe agronomic advice without reviewed content or human escalation.
 
