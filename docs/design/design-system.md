@@ -1,6 +1,6 @@
 # N'djar Design System Foundation
 
-Este documento define a base visual inicial da N'djar para o MVP. A fonte visual é a imagem local `C:\Users\binta\Downloads\Concurso Ndjar Engim\ndjar_app_prototipos_frontend.png`, usada apenas como referência de produto, hierarquia, cor e componentes. Não deve ser copiada para o repositório nem tratada como asset final.
+Este documento define a base visual inicial da N'djar para o MVP. A referência visual é o protótipo local da app N'djar, usado apenas para orientar produto, hierarquia, cor e componentes. Nota interna: a imagem original estava em `C:\Users\binta\Downloads\Concurso Ndjar Engim\ndjar_app_prototipos_frontend.png`. Não deve ser copiada para o repositório nem tratada como asset final.
 
 O pacote partilhável está em `packages/design-system`. Os tokens reutilizáveis vivem em `packages/design-system/src/tokens.ts` e devem ser a fonte de verdade para mobile, web e admin sempre que estes clientes forem alinhados.
 
@@ -89,13 +89,15 @@ Estados base:
 - `info`: Comunidade ou informação, azul.
 - `offline`: Modo offline ou USSD, verde escuro em superfície suave.
 
-Escala inicial de pH:
+Escala visual global de pH, alinhada com `@ndjar/domain`:
 
-- Ácido: 0 a 5.5, estado inadequado.
-- Ideal: 5.5 a 7.2, estado bom.
-- Alcalino: 7.2 a 14, estado razoável com apoio de cor soil quando necessário.
+- Ácido: abaixo de 5.6, estado inadequado.
+- Favorável: 5.6 a 6.5, estado bom.
+- Quase neutro: maior que 6.5 e menor que 7, estado razoável.
+- Neutro: valor pontual 7, sem range visual forçado.
+- Alcalino: maior que 7 até 14, estado razoável com apoio de cor soil quando necessário.
 
-Os valores são fundação visual e não substituem validação agronómica. Regras agronómicas finais devem vir do domínio ou de dados validados.
+Os valores são fundação visual e seguem a classificação global de `@ndjar/domain`. Não devem calcular compatibilidade por cultura. Essa compatibilidade deve ser calculada fora dos tokens globais, com regras de domínio, dados validados ou recomendações agronómicas específicas.
 
 ## Componentes
 

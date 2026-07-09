@@ -129,26 +129,82 @@ export const status = {
   },
 } as const;
 
+export type PhBound = "inclusive" | "exclusive";
+
+export type PhScaleRangeBand = {
+  kind: "range";
+  label: string;
+  range: readonly [number, number];
+  lowerBound: PhBound;
+  upperBound: PhBound;
+  color: string;
+  status: string;
+};
+
+export type PhScalePointBand = {
+  kind: "point";
+  label: string;
+  value: number;
+  color: string;
+  status: string;
+};
+
+export type PhScaleBand = PhScaleRangeBand | PhScalePointBand;
+
+export type PhScale = {
+  acidic: PhScaleRangeBand;
+  favorable: PhScaleRangeBand;
+  nearNeutral: PhScaleRangeBand;
+  neutral: PhScalePointBand;
+  alkaline: PhScaleRangeBand;
+};
+
 export const phScale = {
-  acid: {
+  acidic: {
+    kind: "range",
     label: "Ácido",
-    range: [0, 5.5],
+    range: [0, 5.6],
+    lowerBound: "inclusive",
+    upperBound: "exclusive",
     color: colors.status.danger,
     status: status.danger.label,
   },
-  ideal: {
-    label: "Ideal",
-    range: [5.5, 7.2],
+  favorable: {
+    kind: "range",
+    label: "Favorável",
+    range: [5.6, 6.5],
+    lowerBound: "inclusive",
+    upperBound: "inclusive",
     color: colors.status.success,
     status: status.success.label,
   },
+  nearNeutral: {
+    kind: "range",
+    label: "Quase neutro",
+    range: [6.5, 7],
+    lowerBound: "exclusive",
+    upperBound: "exclusive",
+    color: colors.status.warning,
+    status: status.warning.label,
+  },
+  // Neutral is a single pH value in @ndjar/domain, not a visual range.
+  neutral: {
+    kind: "point",
+    label: "Neutro",
+    value: 7,
+    color: colors.status.info,
+    status: status.info.label,
+  },
   alkaline: {
+    kind: "range",
     label: "Alcalino",
-    range: [7.2, 14],
+    range: [7, 14],
+    lowerBound: "exclusive",
+    upperBound: "inclusive",
     color: colors.data.soil,
     status: status.warning.label,
   },
-} as const;
+} as const satisfies PhScale;
 
 export const elevation = {
   none: {
