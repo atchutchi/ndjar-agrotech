@@ -11,11 +11,13 @@
     "lint": "prettier --check \"*.{js,ts,tsx}\" \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
     "@ndjar/domain": "workspace:*",
     "@ndjar/fixtures": "workspace:*",
     "expo": "^54.0.0",
     "react": "19.1.0",
-    "react-native": "0.81.5"
+    "react-native": "0.81.5",
+    "react-native-maps": "1.20.1"
   },
   "devDependencies": {
     "@types/react": "~19.1.10",

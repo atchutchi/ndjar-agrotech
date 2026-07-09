@@ -29,7 +29,7 @@ The product helps farmers, field teams and agricultural consultants work with so
 
 The repository is now a TypeScript monorepo with shared packages and three application foundations:
 
-- `apps/mobile`: Expo React Native Android-first app with bottom tabs, offline fixture snapshot and consultation triage.
+- `apps/mobile`: Expo React Native Android-first app with bottom tabs, stack-style back navigation, satellite map, realistic local image assets, offline fixture snapshot and consultation triage.
 - `apps/web`: Next.js public web and admin placeholder.
 - `apps/api`: NestJS fixture-backed REST API for mobile and web.
 - `packages/domain`: shared agronomic rules, pH classification, consultation escalation, offline and USSD domain logic.
@@ -49,17 +49,20 @@ Implemented in this branch:
 - PostgreSQL and PostGIS-ready schema for regions, communities, crops, samples, consultations, answer templates, notification jobs and USSD sessions.
 - NestJS API with health, regions, crops, consultations, assistant, sync and USSD preview routes.
 - Expo Android app foundation with Home, Map, Doctor, Forum and Profile tabs.
+- Mobile redesign pass with realistic generated agriculture imagery, icon tabs, Android back handling, clickable cards, visible consultant escalation tickets and satellite map view for the Quinara/Buba pilot.
 - Next.js public web page, admin placeholder and health route.
 - Initial brand guide, wireframes and reusable design tokens.
+- Playwright added for repeatable web/admin smoke testing.
 
 Important limitations:
 
 - No production database is connected yet.
-- No real GPS or precise map geometry is committed.
+- The mobile map uses Google satellite tiles through `react-native-maps`, public Buba coordinates and estimated pilot community points. It is interactive, but the community geometry is still approximate until validated GPS data is supplied.
 - No live USSD short code is connected.
 - No free-form AI advice is enabled.
 - Mobile offline storage is an in-memory foundation for now, not durable device storage.
 - Admin has no authentication and no write workflows yet.
+- Full 3D terrain/vector GIS is not in the Expo Go prototype. That likely needs a development build with MapLibre, Mapbox or MapTiler plus validated geodata.
 
 ## Strategy
 
@@ -126,10 +129,11 @@ Implemented foundation:
 
 - Android app shell with five tabs.
 - Home dashboard for the pilot.
-- Map fallback view with regions and communities, without invented GPS precision.
-- Doctor triage screen using local deterministic safety rules.
-- Forum placeholder with cautious topics.
-- Profile placeholder with sync and pilot context.
+- Satellite map with interactive Buba marker, estimated community markers and an estimated pilot polygon.
+- Region, calendar, sample and crop detail flows reachable from mobile cards.
+- Doctor triage screen using local deterministic safety rules, quick questions and local consultant ticket creation.
+- Forum topics with clickable discussion detail and offline draft saving.
+- Profile screen with clickable data, parcel, sample and sync states.
 - API assistant route with 24-hour escalation.
 - API offline sync route returning pilot fixture data.
 - Web homepage for the N'djar MVP and pilot.
@@ -142,6 +146,7 @@ Planned MVP features not complete yet:
 - Login and registration by phone.
 - Durable offline storage with Expo SQLite or equivalent.
 - Real map layer with validated coordinates.
+- True 3D terrain/vector GIS layer.
 - Soil sample photo capture and upload.
 - Consultant dashboard with assignments.
 - Moderated forum workflows.
@@ -213,6 +218,20 @@ pnpm --filter @ndjar/mobile exec expo install --check
 pnpm --filter @ndjar/mobile exec expo export --platform android --output-dir .expo-export-test --no-minify
 ```
 
+Android local run:
+
+```bash
+pnpm --filter @ndjar/mobile exec expo start --android --clear
+```
+
+Web/admin Playwright smoke check:
+
+```bash
+node tools/playwright-smoke.cjs
+```
+
+The current local audit captures are saved under `audit/mobile-current/` and `audit/playwright/`. They are evidence for local QA, not production assets.
+
 The highest-risk tests protect:
 
 - pH classification consistency.
@@ -226,6 +245,8 @@ The highest-risk tests protect:
 ## Feature Troubleshooting
 
 If the map is unavailable, show the region and community list. Do not invent GPS coordinates.
+
+If Google satellite tiles load slowly in the Android emulator, keep the marker cards visible so the user can still select the region and continue to sample, calendar or consultation flows.
 
 If internet is unavailable, show the local pilot snapshot and allow drafts where implemented.
 
@@ -243,7 +264,7 @@ If Expo reports dependency mismatch, run the Expo dependency check before debugg
 - USSD short-code provider integration.
 - SMS fallback.
 - GPS-validated parcel mapping.
-- Full GIS and PostGIS layers.
+- Full GIS and PostGIS layers with 3D terrain or vector tile support through a development build.
 - More regions beyond the southern pilot.
 - Consultant response dashboard.
 - Push notifications.
@@ -335,10 +356,13 @@ The current seed maps the southern pilot fixtures and deliberately leaves geomet
 Implemented:
 
 - TypeScript.
+- Playwright.
 - pnpm workspaces.
 - Turborepo.
 - Expo.
 - React Native.
+- React Native Maps.
+- Expo Vector Icons.
 - Next.js.
 - NestJS.
 - Drizzle ORM.

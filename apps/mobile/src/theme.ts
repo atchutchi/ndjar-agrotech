@@ -1,12 +1,13 @@
 import { StyleSheet } from "react-native";
 
 export const colors = {
-  brandDark: "#0E3C1D",
-  brandPrimary: "#25662C",
-  action: "#358439",
-  soft: "#B3CBB1",
-  background: "#F5F7F2",
+  brandDark: "#092E1B",
+  brandPrimary: "#1F6B35",
+  action: "#247C37",
+  soft: "#CFE1CC",
+  background: "#F6F8F1",
   surface: "#FFFFFF",
+  surfaceWarm: "#FFF7E8",
   textPrimary: "#183B24",
   textSecondary: "#636560",
   border: "#DDE5DA",
@@ -14,7 +15,10 @@ export const colors = {
   danger: "#D94132",
   soil: "#7A3B22",
   community: "#2E63E6",
+  sky: "#DDEDFC",
+  ink: "#122017",
   mutedSurface: "#ECF5E8",
+  shadow: "#0B2816",
 };
 
 export const spacing = {
@@ -23,6 +27,7 @@ export const spacing = {
   md: 12,
   lg: 16,
   xl: 24,
+  xxl: 32,
 };
 
 export const typography = StyleSheet.create({
@@ -33,15 +38,15 @@ export const typography = StyleSheet.create({
   },
   title: {
     color: colors.textPrimary,
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "800",
-    lineHeight: 30,
+    lineHeight: 34,
   },
   sectionTitle: {
     color: colors.textPrimary,
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: "800",
-    lineHeight: 24,
+    lineHeight: 25,
   },
   body: {
     color: colors.textPrimary,
@@ -68,14 +73,20 @@ export const commonStyles = StyleSheet.create({
   content: {
     gap: spacing.lg,
     padding: spacing.lg,
-    paddingBottom: 112,
+    paddingBottom: 148,
+    paddingTop: spacing.xxl,
   },
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
+    elevation: 2,
     padding: spacing.lg,
+    shadowColor: colors.shadow,
+    shadowOffset: { height: 6, width: 0 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
   },
   row: {
     alignItems: "center",
@@ -89,6 +100,10 @@ export const commonStyles = StyleSheet.create({
     minHeight: 48,
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
+    shadowColor: colors.shadow,
+    shadowOffset: { height: 5, width: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
   },
   buttonText: {
     color: colors.surface,

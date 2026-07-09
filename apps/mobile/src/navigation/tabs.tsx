@@ -1,15 +1,18 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { colors } from "../theme";
+import { colors, spacing } from "../theme";
 
 export type TabId = "home" | "map" | "doctor" | "forum" | "profile";
 
-const tabs: { id: TabId; label: string; shortLabel: string }[] = [
-  { id: "home", label: "Inicio", shortLabel: "In" },
-  { id: "map", label: "Mapa", shortLabel: "Mp" },
-  { id: "doctor", label: "Medico", shortLabel: "Md" },
-  { id: "forum", label: "Forum", shortLabel: "Fr" },
-  { id: "profile", label: "Perfil", shortLabel: "Pf" },
+type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
+
+const tabs: { id: TabId; label: string; icon: IconName }[] = [
+  { id: "home", label: "Inicio", icon: "home-variant-outline" },
+  { id: "map", label: "Mapa", icon: "map-marker-radius-outline" },
+  { id: "doctor", label: "Medico", icon: "stethoscope" },
+  { id: "forum", label: "Forum", icon: "forum-outline" },
+  { id: "profile", label: "Perfil", icon: "account-outline" },
 ];
 
 export function BottomTabs({
@@ -33,24 +36,15 @@ export function BottomTabs({
             onPress={() => onChange(tab.id)}
             style={({ pressed }) => [
               styles.tab,
+              isActive ? styles.tabActive : null,
               pressed ? styles.tabPressed : null,
             ]}
           >
-            <View
-              style={[
-                styles.icon,
-                isActive ? styles.iconActive : styles.iconInactive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.iconText,
-                  isActive ? styles.iconTextActive : styles.iconTextInactive,
-                ]}
-              >
-                {tab.shortLabel}
-              </Text>
-            </View>
+            <MaterialCommunityIcons
+              color={isActive ? colors.surface : colors.textSecondary}
+              name={tab.icon}
+              size={22}
+            />
             <Text style={[styles.label, isActive ? styles.labelActive : null]}>
               {tab.label}
             </Text>
@@ -68,39 +62,21 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderTopWidth: 1,
     bottom: 0,
+    elevation: 14,
     flexDirection: "row",
-    gap: 2,
+    gap: spacing.xs,
     justifyContent: "space-between",
     left: 0,
-    minHeight: 76,
+    minHeight: 78,
     paddingBottom: 10,
-    paddingHorizontal: 8,
-    paddingTop: 8,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
     position: "absolute",
     right: 0,
-  },
-  icon: {
-    alignItems: "center",
-    borderRadius: 999,
-    height: 28,
-    justifyContent: "center",
-    width: 28,
-  },
-  iconActive: {
-    backgroundColor: colors.mutedSurface,
-  },
-  iconInactive: {
-    backgroundColor: "transparent",
-  },
-  iconText: {
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  iconTextActive: {
-    color: colors.brandPrimary,
-  },
-  iconTextInactive: {
-    color: colors.textSecondary,
+    shadowColor: colors.shadow,
+    shadowOffset: { height: -6, width: 0 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
   },
   label: {
     color: colors.textSecondary,
@@ -108,15 +84,18 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   labelActive: {
-    color: colors.brandPrimary,
+    color: colors.surface,
   },
   tab: {
     alignItems: "center",
     borderRadius: 8,
     flex: 1,
     gap: 3,
-    minHeight: 56,
+    minHeight: 58,
     justifyContent: "center",
+  },
+  tabActive: {
+    backgroundColor: colors.brandPrimary,
   },
   tabPressed: {
     opacity: 0.72,

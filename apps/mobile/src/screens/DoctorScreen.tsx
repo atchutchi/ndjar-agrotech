@@ -1,15 +1,42 @@
 import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, TextInput, View } from "react-native";
 
-import { Card, Chip, PrimaryButton, ScreenHeader } from "../components/ui";
+import agriHero from "../../assets/ndjar-agri-realistic.png";
+import type { Navigate } from "../App";
+import {
+  Card,
+  Chip,
+  ListItem,
+  PhotoCard,
+  PrimaryButton,
+  ScreenHeader,
+  SecondaryButton,
+} from "../components/ui";
 import type { PilotSnapshot } from "../storage/offlineStore";
 import { offlineStore } from "../storage/offlineStore";
 import { colors, commonStyles, spacing, typography } from "../theme";
 import { evaluateLocalDoctorQuestion } from "./doctorSafety";
 
-export function DoctorScreen({ snapshot }: { snapshot: PilotSnapshot | null }) {
+const quickQuestions = [
+  "A mandioca nao cresce em Sare Donha 1",
+  "Quando plantar arroz de sequeiro em Buba?",
+  "Posso misturar produto para combater lagarta no milho?",
+];
+
+export function DoctorScreen({
+  snapshot,
+  navigate,
+  onBack,
+  canGoBack,
+}: {
+  snapshot: PilotSnapshot | null;
+  navigate: Navigate;
+  onBack: () => void;
+  canGoBack: boolean;
+}) {
   const [question, setQuestion] = useState("");
   const [result, setResult] = useState<string | null>(null);
+  const [ticket, setTicket] = useState<string | null>(null);
 
   useEffect(() => {
     offlineStore.getDraft("doctor-question").then(setQuestion);
@@ -21,49 +48,105 @@ export function DoctorScreen({ snapshot }: { snapshot: PilotSnapshot | null }) {
 
   function updateQuestion(value: string) {
     setQuestion(value);
+    setTicket(null);
     void offlineStore.saveDraft("doctor-question", value);
   }
 
-  function submitQuestion() {
-    const trimmedQuestion = question.trim();
+  function submitQuestion(questionOverride = question) {
+    const trimmedQuestion = questionOverride.trim();
 
     if (trimmedQuestion.length < 8) {
       setResult(
         "Escreve a pergunta com cultura, comunidade e sinal observado.",
       );
+      setTicket(null);
       return;
     }
 
-    const result = evaluateLocalDoctorQuestion({
+    const localResult = evaluateLocalDoctorQuestion({
       cropId: exampleCrop?.id,
       question: trimmedQuestion,
       regionId: snapshot?.region.id,
     });
 
-    if (result.decision.shouldEscalate) {
+    if (localResult.decision.shouldEscalate) {
       setResult(
-        "Escalar para consultor em 24h. Nao dar dose, mistura, produto ou prazo de colheita sem revisao.",
+        "Escalar para consultor em 24h. A app nao deve dar dose, mistura, produto ou prazo de colheita sem revisao.",
       );
+      setTicket(`NDJ-${Date.now().toString().slice(-5)}`);
       return;
     }
 
-    setResult(result.answer ?? "Escalar para consultor em 24h.");
+    setResult(localResult.answer ?? "Escalar para consultor em 24h.");
+    setTicket(null);
   }
 
   return (
     <ScrollView contentContainerStyle={commonStyles.content}>
       <ScreenHeader
-        title="Medico Agricola"
-        subtitle="Perguntas locais com triagem prudente."
+        onBack={canGoBack ? onBack : undefined}
+        title="Médico Agrícola"
+        subtitle="Triagem local com resposta segura e encaminhamento para consultor."
       />
+
+      <PhotoCard
+        image={agriHero}
+        subtitle="A IA responde só ao que está aprovado. Casos de risco seguem para agrónomo."
+        title="Consulta no campo"
+      >
+        <View style={{ flexDirection: "row", gap: spacing.sm }}>
+          <View style={{ flex: 1 }}>
+            <PrimaryButton
+              icon="message-processing-outline"
+              label="Verificar"
+              onPress={submitQuestion}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <SecondaryButton
+              icon="map-marker-radius-outline"
+              label="Mapa"
+              onPress={() => navigate("root", undefined, "map")}
+            />
+          </View>
+        </View>
+      </PhotoCard>
+
+      {result ? (
+        <Card>
+          <View style={{ gap: spacing.md }}>
+            <Text style={typography.sectionTitle}>Resultado</Text>
+            <Text style={typography.body}>{result}</Text>
+            {ticket ? (
+              <ListItem
+                icon="clipboard-text-clock-outline"
+                meta="Pedido criado localmente para parecer do consultor."
+                title={`Ticket ${ticket}`}
+              />
+            ) : null}
+          </View>
+        </Card>
+      ) : null}
 
       <Card>
         <View style={{ gap: spacing.md }}>
-          <Chip label="Triagem local" />
-          <Text style={typography.body}>
-            Perguntas inseguras seguem para consultor. A app so responde quando
-            a regra local permite uma resposta deterministica.
-          </Text>
+          <View style={{ flexDirection: "row", gap: spacing.sm }}>
+            <Chip label="Resposta local" />
+            <Chip label="24h consultor" tone="warning" />
+          </View>
+          <Text style={typography.sectionTitle}>Perguntas rápidas</Text>
+          {quickQuestions.map((item) => (
+            <ListItem
+              icon="comment-question-outline"
+              key={item}
+              meta="Tocar para preencher a pergunta"
+              title={item}
+              onPress={() => {
+                updateQuestion(item);
+                submitQuestion(item);
+              }}
+            />
+          ))}
         </View>
       </Card>
 
@@ -79,22 +162,17 @@ export function DoctorScreen({ snapshot }: { snapshot: PilotSnapshot | null }) {
             placeholderTextColor={colors.textSecondary}
             style={[
               commonStyles.input,
-              { minHeight: 116, textAlignVertical: "top" },
+              { minHeight: 124, textAlignVertical: "top" },
             ]}
             value={question}
           />
-          <PrimaryButton label="Verificar pergunta" onPress={submitQuestion} />
+          <PrimaryButton
+            icon="shield-check-outline"
+            label="Verificar pergunta"
+            onPress={submitQuestion}
+          />
         </View>
       </Card>
-
-      {result ? (
-        <Card>
-          <View style={{ gap: spacing.sm }}>
-            <Text style={typography.sectionTitle}>Resultado</Text>
-            <Text style={typography.body}>{result}</Text>
-          </View>
-        </Card>
-      ) : null}
     </ScrollView>
   );
 }

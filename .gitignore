@@ -24,6 +24,7 @@ Thumbs.db
 ._*
 tmp/
 temp/
+audit/
 .idea/
 .vscode/
 .worktrees
