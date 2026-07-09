@@ -4,11 +4,16 @@
     "slug": "ndjar-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
+    "icon": "./assets/brand/ndjar-icon.png",
     "platforms": ["android"],
     "scheme": "ndjar",
     "userInterfaceStyle": "light",
     "android": {
-      "package": "com.ndjar.mobile"
+      "package": "com.ndjar.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/ndjar-icon.png",
+        "backgroundColor": "#F6F8F1"
+      }
     }
   }
 }

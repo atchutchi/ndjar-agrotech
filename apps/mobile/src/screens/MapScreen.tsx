@@ -108,7 +108,7 @@ export function MapScreen({
       <ScrollView contentContainerStyle={commonStyles.content}>
         <ScreenHeader
           onBack={onBack}
-          subtitle="Registo funcional para recolher dados e pedir validaÃ§Ã£o."
+          subtitle="Registo funcional para recolher dados e pedir validação."
           title="Amostra de solo"
         />
         <Card>
@@ -125,7 +125,7 @@ export function MapScreen({
             />
             <ListItem
               icon="numeric-3-circle-outline"
-              meta="Enviar para laboratÃ³rio ou tÃ©cnico responsÃ¡vel."
+              meta="Enviar para laboratório ou técnico responsável."
               title="Validar pH"
             />
             <PrimaryButton
@@ -146,7 +146,7 @@ export function MapScreen({
       <ScrollView contentContainerStyle={commonStyles.content}>
         <ScreenHeader
           onBack={onBack}
-          subtitle="Ficha agrÃ­cola com compatibilidade regional e acÃ§Ã£o segura."
+          subtitle="Ficha agrícola com compatibilidade regional e acção segura."
           title={selectedCrop?.label ?? "Cultivo"}
         />
         <Card>
@@ -162,37 +162,35 @@ export function MapScreen({
                   {selectedCrop?.label ?? "Mandioca"}
                 </Text>
                 <Text style={typography.secondary}>
-                  pH de referÃªncia {cropPhRanges[cropId] ?? "a validar"}
+                  pH de referência {cropPhRanges[cropId] ?? "a validar"}
                 </Text>
               </View>
             </View>
-            {["BafatÃ¡", "Tombali", "Cacheu", "Quinara"].map(
-              (region, index) => (
-                <View key={region} style={{ gap: spacing.xs }}>
-                  <View style={styles.timelineRow}>
-                    <Text style={typography.label}>{region}</Text>
-                    <Text style={typography.secondary}>
-                      {[80, 78, 55, 20][index]}%
-                    </Text>
-                  </View>
-                  <View style={styles.timelineTrack}>
-                    <View
-                      style={[
-                        styles.timelineFill,
-                        {
-                          backgroundColor:
-                            index === 3 ? colors.danger : colors.brandPrimary,
-                          width: `${[80, 78, 55, 20][index]}%`,
-                        },
-                      ]}
-                    />
-                  </View>
+            {["Bafatá", "Tombali", "Cacheu", "Quinara"].map((region, index) => (
+              <View key={region} style={{ gap: spacing.xs }}>
+                <View style={styles.timelineRow}>
+                  <Text style={typography.label}>{region}</Text>
+                  <Text style={typography.secondary}>
+                    {[80, 78, 55, 20][index]}%
+                  </Text>
                 </View>
-              ),
-            )}
+                <View style={styles.timelineTrack}>
+                  <View
+                    style={[
+                      styles.timelineFill,
+                      {
+                        backgroundColor:
+                          index === 3 ? colors.danger : colors.brandPrimary,
+                        width: `${[80, 78, 55, 20][index]}%`,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+            ))}
             <PrimaryButton
               icon="stethoscope"
-              label="Pedir orientaÃ§Ã£o ao MÃ©dico AgrÃ­cola"
+              label="Pedir orientação ao Médico Agrícola"
               onPress={() => navigate("root", undefined, "doctor")}
             />
           </View>
@@ -204,10 +202,10 @@ export function MapScreen({
   return (
     <ScrollView contentContainerStyle={commonStyles.content}>
       <ScreenHeader
-        action={<Chip label="SatÃ©lite" tone="community" />}
+        action={<Chip label="Satélite" tone="community" />}
         onBack={canGoBack ? onBack : undefined}
-        subtitle="Selecciona uma zona para ver solo, aptidÃ£o e uso possÃ­vel."
-        title="Mapa agrÃ­cola"
+        subtitle="Selecciona uma zona para ver solo, aptidão e uso possível."
+        title="Mapa agrícola"
       />
 
       <View style={styles.mapShell}>
@@ -230,7 +228,7 @@ export function MapScreen({
           />
           <Marker
             coordinate={bubaCenter}
-            description="Centro de referÃªncia pÃºblico para Buba"
+            description="Centro de referência público para Buba"
             title="Buba"
           />
           {communityPoints.map((point) => {
@@ -281,23 +279,23 @@ export function MapScreen({
           </Text>
           <Text style={typography.body}>
             {selectedCommunity
-              ? `${selectedCommunity.areaHectares} ha estimados, parcelas de ${selectedCommunity.parcelSizeHectares} ha, produÃ§Ã£o orgÃ¢nica sem uso quÃ­mico reportado.`
+              ? `${selectedCommunity.areaHectares} ha estimados, parcelas de ${selectedCommunity.parcelSizeHectares} ha, produção orgânica sem uso químico reportado.`
               : "Selecciona uma comunidade no mapa."}
           </Text>
           <View style={{ gap: spacing.sm }}>
             <ListItem
               icon="terrain"
-              meta="Solo Ã¡cido a validar. Confirmar pH, matÃ©ria orgÃ¢nica e drenagem antes de recomendar."
+              meta="Solo ácido a validar. Confirmar pH, matéria orgânica e drenagem antes de recomendar."
               title="Tipo de solo"
             />
             <ListItem
               icon="grass"
-              meta="PossÃ­vel apenas com validaÃ§Ã£o de Ã¡gua, acesso e pressÃ£o animal."
+              meta="Possível apenas com validação de água, acesso e pressão animal."
               title="Pastagem animal"
             />
             <ListItem
               icon="leaf-circle-outline"
-              meta="ConservaÃ§Ã£o do solo melhora Ã¡gua, fertilidade e actividade biolÃ³gica."
+              meta="Conservação do solo melhora água, fertilidade e actividade biológica."
               title="Manejo recomendado"
             />
           </View>
@@ -305,7 +303,7 @@ export function MapScreen({
             <View style={{ flex: 1 }}>
               <SecondaryButton
                 icon="calendar-clock"
-                label="CalendÃ¡rio"
+                label="Calendário"
                 onPress={() => navigate("calendar")}
               />
             </View>
@@ -326,7 +324,7 @@ export function MapScreen({
           {(snapshot?.crops.slice(0, 9) ?? []).map((crop) => (
             <CropRow
               key={crop.id}
-              meta={`pH de referÃªncia ${cropPhRanges[crop.id] ?? "a validar"}`}
+              meta={`pH de referência ${cropPhRanges[crop.id] ?? "a validar"}`}
               source={cropImages[crop.id] ?? mandiocaIcon}
               title={crop.label}
               onPress={() => navigate("crop", { cropId: crop.id })}

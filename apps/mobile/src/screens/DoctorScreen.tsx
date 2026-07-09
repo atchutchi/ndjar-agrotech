@@ -155,7 +155,7 @@ export function DoctorScreen({
           <Text style={typography.sectionTitle}>Nova pergunta</Text>
           <Text style={typography.label}>Descreve o problema</Text>
           <TextInput
-            accessibilityLabel="Pergunta para o Medico Agricola"
+            accessibilityLabel="Pergunta para o Médico Agrícola"
             multiline
             onChangeText={updateQuestion}
             placeholder="Ex.: A mandioca nao cresce em Sare Donha 1"

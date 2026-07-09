@@ -10,7 +10,7 @@ type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 const tabs: { id: TabId; label: string; icon: IconName }[] = [
   { id: "home", label: "Inicio", icon: "home-variant-outline" },
   { id: "map", label: "Mapa", icon: "map-marker-radius-outline" },
-  { id: "doctor", label: "Medico", icon: "stethoscope" },
+  { id: "doctor", label: "Médico", icon: "stethoscope" },
   { id: "forum", label: "Forum", icon: "forum-outline" },
   { id: "profile", label: "Perfil", icon: "account-outline" },
 ];
