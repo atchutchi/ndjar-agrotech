@@ -1,6 +1,7 @@
 node_modules/
 .pnpm-store/
 .expo/
+.expo-export-test/
 .next/
 .nuxt/
 dist/

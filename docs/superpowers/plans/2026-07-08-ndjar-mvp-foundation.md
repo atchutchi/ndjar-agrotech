@@ -8,6 +8,12 @@
 
 **Tech Stack:** TypeScript, pnpm workspaces, Expo, React Native, Next.js, NestJS, Drizzle, PostgreSQL, PostGIS, Redis, BullMQ, Zod, TanStack Query, Zustand, React Hook Form, MapLibre, Expo SQLite, Remotion.
 
+## Execution Status
+
+Tasks 1 to 8 are implemented and reviewed in branch `agent/mvp-foundation`.
+
+Task 9 is updating project documentation, running final verification and pushing the implementation branch to GitHub.
+
 ## Global Constraints
 
 Android mobile comes first.

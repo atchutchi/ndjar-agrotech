@@ -1,272 +1,281 @@
 # N'djar Agrotech
 
-N'djar is a mobile-first agricultural decision platform for Guinea-Bissau. The first MVP focuses on Android and the southern pilot area documented in the project reports, especially Quinara, Buba, Sare Donha, Uane and Ugui. The web version will follow as a public portal and admin panel.
+N'djar is a mobile-first agricultural decision platform for Guinea-Bissau. The current MVP foundation focuses first on Android, then web and admin. The first pilot area is the southern diagnosis scope around Quinara, Buba, Sare Donha 1, Sare Donha 2, Uane and Ugui.
 
-The product helps farmers, field teams and agricultural consultants understand soil pH, choose suitable crops, follow agricultural calendars, request support from agricultural doctors and access validated farming information. USSD and short-code access are planned for phase 2 so the service can also support farmers with weak internet access.
+The product helps farmers, field teams and agricultural consultants work with soil pH, crop observations, agricultural calendars, local knowledge, safe consultation triage and future USSD access. The assistant is intentionally deterministic in this foundation. It only returns predefined safe answers and escalates unsafe or unknown questions to an agricultural doctor workflow.
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Strategy](#strategy)
-3. [User Stories](#user-stories)
-4. [Skeleton](#skeleton)
-5. [Features](#features)
-6. [SEO](#seo)
-7. [Wireframes](#wireframes)
-8. [Testing](#testing)
-9. [Feature Troubleshooting](#feature-troubleshooting)
-10. [Future Development](#future-development)
-11. [Accessibility](#accessibility)
-12. [Deployment](#deployment)
-13. [Credits](#credits)
-14. [Code](#code)
-15. [Storage](#storage)
-16. [Database](#database)
-17. [Languages and Technologies Used](#languages-and-technologies-used)
+2. [Current Status](#current-status)
+3. [Strategy](#strategy)
+4. [User Stories](#user-stories)
+5. [Skeleton](#skeleton)
+6. [Features](#features)
+7. [SEO](#seo)
+8. [Wireframes](#wireframes)
+9. [Testing](#testing)
+10. [Feature Troubleshooting](#feature-troubleshooting)
+11. [Future Development](#future-development)
+12. [Accessibility](#accessibility)
+13. [Deployment](#deployment)
+14. [Credits](#credits)
+15. [Code](#code)
+16. [Storage](#storage)
+17. [Database](#database)
+18. [Languages and Technologies Used](#languages-and-technologies-used)
 
 ## Overview
 
-The first functional prototype will reproduce the pitch and mobile prototype flow shown in `ndjar_app_prototipos_frontend.png`.
+The repository is now a TypeScript monorepo with shared packages and three application foundations:
 
-The MVP will include:
+- `apps/mobile`: Expo React Native Android-first app with bottom tabs, offline fixture snapshot and consultation triage.
+- `apps/web`: Next.js public web and admin placeholder.
+- `apps/api`: NestJS fixture-backed REST API for mobile and web.
+- `packages/domain`: shared agronomic rules, pH classification, consultation escalation, offline and USSD domain logic.
+- `packages/fixtures`: southern pilot seed fixtures with explicit source status.
+- `packages/database`: Drizzle PostgreSQL and PostGIS-ready schema plus typed pilot seed mapping.
+- `packages/design-system`: N'djar tokens for colour, typography, spacing, radius, pH states, breakpoints and touch targets.
 
-- Android app first.
-- Web admin and public website second.
-- Southern pilot data first.
-- Interactive map with regional selection.
-- Soil pH guidance with clear validation status.
-- Crop recommendations by region.
-- Agricultural calendar.
-- Soil sample registration.
-- Agricultural doctor consultations.
-- Controlled AI assistant with predefined and reviewed answers.
-- Consultant escalation when the assistant cannot answer safely.
-- Offline-first content and draft storage.
-- USSD-ready architecture for phase 2.
+The prototype reference is `ndjar_app_prototipos_frontend.png`. It is used as a design reference only. It is not committed as a production asset.
+
+## Current Status
+
+Implemented in this branch:
+
+- Monorepo tooling with `pnpm`, Turborepo and shared TypeScript config.
+- Domain rules for pH, source status, offline strategy, USSD session state and consultation escalation.
+- Southern pilot fixtures for Quinara/Buba with cautious source status.
+- PostgreSQL and PostGIS-ready schema for regions, communities, crops, samples, consultations, answer templates, notification jobs and USSD sessions.
+- NestJS API with health, regions, crops, consultations, assistant, sync and USSD preview routes.
+- Expo Android app foundation with Home, Map, Doctor, Forum and Profile tabs.
+- Next.js public web page, admin placeholder and health route.
+- Initial brand guide, wireframes and reusable design tokens.
+
+Important limitations:
+
+- No production database is connected yet.
+- No real GPS or precise map geometry is committed.
+- No live USSD short code is connected.
+- No free-form AI advice is enabled.
+- Mobile offline storage is an in-memory foundation for now, not durable device storage.
+- Admin has no authentication and no write workflows yet.
 
 ## Strategy
 
-The strategy is to build a useful MVP before building a large platform.
+Phase 1 is a digital MVP. It validates the Android journey, the shared data model, the safe consultation flow and the pilot content structure.
 
-Phase 1 is digital and mobile-first. It validates the user journey, the data model and the consultation workflow. It must work on Android, with offline content and local drafts.
+Phase 2 adds USSD and short-code access. The backend already models USSD sessions, but there is no telecom integration in this branch.
 
-Phase 2 adds USSD and short-code access. The backend must be prepared for it from the start, but the MVP will not depend on live USSD integration.
+Phase 3 adds GPS validation, stronger GIS layers, more regions, consultant operations, durable offline sync, payments and production deployment.
 
-Phase 3 adds stronger GIS precision, GPS validation, more regions, consultant operations and production-grade payments.
-
-The main product risk is agronomic accuracy. The app must never present estimated pH or sample data as final truth. Each recommendation needs source, date, status and confidence.
+The main product risk is agronomic accuracy. The app must not present estimated or example data as validated truth. Every sensitive row keeps a source status such as `field_observed`, `estimated`, `example`, `self_reported`, `lab_validated` or `consultant_reviewed`.
 
 ## User Stories
 
-### Farmer
+Farmer:
 
-As a farmer in Quinara, I want to select my community and see the known pH range so that I understand whether my soil is acidic, reasonable or suitable for common crops.
+- As a farmer in Quinara, I want to see my pilot region, communities and pH context so that I understand the current information before asking for help.
+- As a farmer with weak internet, I want the app to open with saved pilot content so that I can keep using basic information offline.
+- As a farmer with a crop problem, I want to ask a question and either receive a safe predefined answer or have it escalated to an agricultural doctor.
+- As a farmer collecting a soil sample, I want the future app to store parcel, community, crop, coordinates and photo as a draft.
 
-As a farmer with poor internet, I want to read saved guides and agricultural calendar tasks offline so that I can continue working without mobile data.
+Agricultural doctor:
 
-As a farmer with a crop problem, I want to ask a simple question and receive a safe first answer so that I know what to do next.
+- As an agricultural doctor, I want unsafe or unknown questions to arrive in a review queue so that I can answer within 24 hours.
+- As an agricultural doctor, I want to see crop, region, source status and sample context before advising.
+- As an agricultural doctor, I want predefined answers to be reviewed and auditable.
 
-As a farmer whose question is complex, I want my request to be sent to an agricultural doctor so that I receive a technical opinion within 24 hours.
+Admin:
 
-As a farmer collecting a soil sample, I want to register the parcel, community, crop and photo so that the sample can later be validated by a technician.
+- As an admin, I want to manage regions, communities, crops, pH records, calendars, templates and library content.
+- As an admin, I want to moderate forum content so that unsafe advice does not spread.
+- As an admin, I want data source status visible before publishing recommendations.
 
-### Agricultural Doctor
+Public website visitor:
 
-As an agricultural consultant, I want to see pending questions grouped by crop, region and urgency so that I can respond within 24 hours.
-
-As an agricultural consultant, I want to approve or correct AI suggested answers so that farmers receive safe guidance.
-
-As an agricultural consultant, I want to see sample history before giving a recommendation so that I do not answer without context.
-
-### Admin
-
-As an admin, I want to manage regions, communities, crops, pH ranges and sources so that the app uses controlled data.
-
-As an admin, I want to moderate forum content so that wrong agricultural advice does not spread.
-
-As an admin, I want to publish library content by language and offline availability so that the mobile app can sync useful information.
-
-### Public Website Visitor
-
-As a partner or funder, I want to understand the N'djar mission, pilot area, services and impact so that I can assess collaboration.
-
-As a cooperative, I want to contact N'djar and request support so that my members can access agricultural information.
+- As a partner, funder or cooperative, I want to understand the pilot, services and contact path.
+- As a technical partner, I want to see that the MVP separates mobile, web, API, database, domain rules and fixtures.
 
 ## Skeleton
-
-Recommended monorepo:
 
 ```text
 ndjar-agrotech/
   apps/
+    api/
     mobile/
     web/
-    api/
   packages/
-    config/
     database/
     design-system/
     domain/
     fixtures/
-    ui/
   docs/
-    product/
-    design/
     data/
-    operations/
+    design/
+    product/
     superpowers/
-  scripts/
+  package.json
+  pnpm-workspace.yaml
+  turbo.json
 ```
-
-The skeleton separates mobile, web, API, shared domain logic, design tokens, database schema and pilot fixtures.
 
 ## Features
 
-### MVP Features
+Implemented foundation:
 
-- Onboarding.
-- Language selection.
+- Android app shell with five tabs.
+- Home dashboard for the pilot.
+- Map fallback view with regions and communities, without invented GPS precision.
+- Doctor triage screen using local deterministic safety rules.
+- Forum placeholder with cautious topics.
+- Profile placeholder with sync and pilot context.
+- API assistant route with 24-hour escalation.
+- API offline sync route returning pilot fixture data.
+- Web homepage for the N'djar MVP and pilot.
+- Web admin placeholder for future management workflows.
+- Database schema ready for PostGIS and future USSD sessions.
+- Design tokens and brand guide.
+
+Planned MVP features not complete yet:
+
 - Login and registration by phone.
-- Home dashboard.
-- Pilot map for southern Guinea-Bissau.
-- Region detail with pH status.
-- Crop list and crop detail.
-- Agricultural calendar.
-- Soil sample draft registration.
-- Agricultural doctor directory.
-- Consultation request.
-- Controlled AI assistant for predefined questions.
-- Escalation to consultant.
-- Forum read and draft question flow.
-- Offline library.
-- Profile and sync state.
-
-### Web Features
-
-- Public landing page.
-- Project overview.
-- Services.
-- Pilot data explanation.
-- Contact.
-- Admin login.
-- Region and crop management.
-- Library management.
-- Consultation queue.
-- Forum moderation.
+- Durable offline storage with Expo SQLite or equivalent.
+- Real map layer with validated coordinates.
+- Soil sample photo capture and upload.
+- Consultant dashboard with assignments.
+- Moderated forum workflows.
+- Library downloads for offline reading.
+- Subscription and payment workflows.
 
 ## SEO
 
-Initial SEO focus for the public web version:
+The web foundation includes metadata for the public site. Initial SEO targets:
 
-- Agricultural support in Guinea-Bissau.
+- N'djar agricultural support.
+- Agriculture in Guinea-Bissau.
 - Soil pH and crop suitability.
-- Agricultural calendar Guinea-Bissau.
-- N'djar agricultural doctor.
-- Digital agriculture for farmers.
-- USSD agriculture information Guinea-Bissau.
+- Agricultural doctor support.
+- Quinara and Buba pilot.
+- USSD agriculture information in a future phase.
 
-Each public page must include a clear title, description, Open Graph metadata, structured headings and human-readable URLs.
+Each future public page should keep a clear title, description, structured headings and human-readable URL.
 
 ## Wireframes
 
-The mobile wireframes follow the provided 24-screen prototype:
+The 24 prototype screens are mapped in `docs/design/wireframes.md`.
 
-1. Splash.
-2. Onboarding.
-3. Language and access mode.
-4. Login.
-5. Registration.
-6. Home.
-7. Agricultural map.
-8. Region detail.
-9. Crop list.
-10. Crop detail.
-11. Calendar.
-12. Soil sample.
-13. Livestock.
-14. Agricultural doctors.
-15. Doctor profile.
-16. Appointment booking.
-17. Chat.
-18. Forum.
-19. Discussion.
-20. New question.
-21. Library.
-22. Subscription.
-23. Contact.
-24. Profile.
+Mobile route groups:
 
-The web wireframes will not copy the phone UI. The web will use a public landing page and an admin panel with dense management views.
+- Onboarding and language.
+- Home and pilot summary.
+- Map, region detail and pH context.
+- Crops and crop detail.
+- Calendar and sample registration.
+- Agricultural doctor and consultations.
+- Forum and discussion.
+- Library, subscription, contact and profile.
+
+Web route groups:
+
+- `/`: public MVP overview.
+- `/admin`: admin placeholder for future operational modules.
+- `/api/health`: web health route.
 
 ## Testing
 
-Testing will cover:
+Available commands:
 
-- Unit tests for domain rules.
-- Database schema tests.
-- API tests.
-- React Native component tests.
-- Offline sync tests.
-- Map interaction tests.
-- Accessibility tests.
-- End-to-end tests for critical user journeys.
-- Seed data validation for pilot content.
+```bash
+pnpm install
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
 
-The first test priority is not visual perfection. The first priority is preventing unsafe recommendations and broken offline flows.
+Targeted checks:
+
+```bash
+pnpm --filter @ndjar/domain test
+pnpm --filter @ndjar/fixtures test
+pnpm --filter @ndjar/database test
+pnpm --filter @ndjar/api test
+pnpm --filter @ndjar/mobile test
+pnpm --filter @ndjar/web test
+pnpm --filter @ndjar/design-system test
+```
+
+Mobile Expo validation:
+
+```bash
+pnpm --filter @ndjar/mobile exec expo install --check
+pnpm --filter @ndjar/mobile exec expo export --platform android --output-dir .expo-export-test --no-minify
+```
+
+The highest-risk tests protect:
+
+- pH classification consistency.
+- Source status preservation.
+- Unsafe consultation escalation.
+- Pilot fixture confidence.
+- Database seed mapping.
+- Mobile doctor safety.
+- Design pH token alignment with domain rules.
 
 ## Feature Troubleshooting
 
-If the map does not load, the app must show the list of regions and pH ranges as fallback.
+If the map is unavailable, show the region and community list. Do not invent GPS coordinates.
 
-If internet is unavailable, the app must show saved library content and allow sample drafts.
+If internet is unavailable, show the local pilot snapshot and allow drafts where implemented.
 
-If the AI assistant is uncertain, it must escalate to an agricultural doctor.
+If the assistant is uncertain, unsafe or missing a reviewed template, escalate to an agricultural doctor.
 
-If no consultant is available, the user must see a clear 24-hour response expectation.
+If a pH value is not validated, show its status as example, estimated or pending. Do not show it as a final recommendation.
 
-If a pH value is not validated, the UI must show estimated or pending status.
+If the web build changes generated Next files, keep generated files ignored and rerun the web checks.
 
-If a payment integration is unavailable, the MVP must keep consultation requests in a manual review state.
+If Expo reports dependency mismatch, run the Expo dependency check before debugging runtime issues.
 
 ## Future Development
 
-- USSD short-code integration.
-- Orange Money payments.
+- Durable offline storage with conflict handling.
+- USSD short-code provider integration.
+- SMS fallback.
 - GPS-validated parcel mapping.
 - Full GIS and PostGIS layers.
 - More regions beyond the southern pilot.
 - Consultant response dashboard.
 - Push notifications.
-- SMS fallback.
 - Multilingual content in Portuguese, Crioulo, Fula and Balanta.
 - Cooperative accounts.
 - Field agent mode.
-- Advanced recommendation engine.
-- Remotion videos for farmer education and onboarding content.
+- Payment integration, including Orange Money if approved.
+- Remotion videos for farmer education and onboarding.
 
 ## Accessibility
 
-The app must not rely only on colour for pH states. It must show text labels such as ideal, reasonable, acidic, pending and validated.
+The product must not rely on colour alone. pH and source states need labels, numbers and status text.
 
-Touch targets must be at least 44 px.
+Mobile touch targets should be at least 48 px on Android.
 
-Body text must remain readable on low-cost Android phones.
+Forms need labels, helper text and clear errors.
 
-Forms must have labels, helper text and clear error messages.
+Critical actions must remain visible on small Android screens.
 
-The app must support reduced motion and screen reader labels.
+Hover-only information is not acceptable for public web or admin.
 
 ## Deployment
 
-Target deployment:
+Planned deployment targets:
 
-- Mobile app: Expo EAS for Android builds.
+- Mobile: Expo and EAS Android builds.
 - Web: Vercel or another Next.js-compatible host.
-- API: Render, Fly.io, Railway, DigitalOcean or a VPS, depending on cost and data needs.
+- API: Render, Fly.io, Railway, DigitalOcean or a VPS.
 - Database: managed PostgreSQL with PostGIS.
-- Storage: S3-compatible object storage for images and sample photos.
+- Storage: S3-compatible object storage for photos and library assets.
 
-No external production accounts should be created without explicit permission.
+No external production account should be created without explicit permission.
 
 ## Credits
 
@@ -276,85 +285,73 @@ Institutional base: ABIPTOM SARL.
 
 Concept: agricultural aptitude, soil pH, mobile app, web platform and future USSD access for farmers in Guinea-Bissau.
 
-Design reference: `ndjar_app_prototipos_frontend.png`.
+Design reference: local `ndjar_app_prototipos_frontend.png`.
 
-Source material: local N'djar documents, pitch decks, diagnosis reports, calendar sheets and company files.
+Source material: local N'djar diagnosis reports, pitch material, agricultural calendar notes and product documents. Private legal, banking, identity and passport documents must not be committed.
 
 ## Code
 
-Code must be organised by responsibility. Shared agricultural rules must live in packages, not inside screens.
+Shared agronomic rules live in packages, not screens.
 
-Mobile screens should consume typed domain data.
+Mobile and web should consume typed shared data.
 
-Backend routes should validate all inputs.
+Backend routes validate inputs and should keep the assistant deterministic until reviewed content and consultant workflows mature.
 
-Admin changes to agricultural data must be auditable.
+Admin changes to agricultural data must be auditable in future work.
 
 ## Storage
 
-Storage will be needed for:
+Future storage needs:
 
 - Soil sample photos.
 - Farmer parcel photos.
 - Consultant profile photos.
 - Library PDFs and images.
 - Map assets.
-- Generated educational videos.
+- Generated education videos.
 
-Private documents and legal records must not be committed to the public repository.
+Private documents and legal records must stay outside the repository.
 
 ## Database
 
-The database will use PostgreSQL with PostGIS.
+The database package uses Drizzle schema definitions for PostgreSQL and PostGIS-ready geometry columns.
 
-Core entities:
+Core model groups:
 
-- Users.
-- Farmer profiles.
-- Consultants.
-- Regions.
-- Communities.
-- Parcels.
-- Soil samples.
-- pH results.
-- Crops.
-- Crop recommendations.
+- Users and roles.
+- Regions, communities and community groups.
+- Crops, crop presence and crop evidence.
+- Soil samples and pH source status.
 - Calendar tasks.
-- Library resources.
-- Forum questions.
-- Forum replies.
-- Consultations.
-- AI answers.
-- Consultant reviews.
-- Subscriptions.
-- Payments.
+- Consultations and consultation responses.
+- Reviewed answer templates.
+- Notification jobs.
 - USSD sessions for phase 2.
+
+The current seed maps the southern pilot fixtures and deliberately leaves geometry fields nullable because validated coordinates are not available yet.
 
 ## Languages and Technologies Used
 
-Planned stack:
+Implemented:
 
 - TypeScript.
-- React Native.
+- pnpm workspaces.
+- Turborepo.
 - Expo.
+- React Native.
 - Next.js.
 - NestJS.
-- PostgreSQL.
-- PostGIS.
-- Drizzle or Kysely.
-- TanStack Query.
-- Zustand.
-- React Hook Form.
+- Drizzle ORM.
+- PostgreSQL and PostGIS-ready schema.
 - Zod.
-- MapLibre.
-- Expo SQLite.
-- Remotion for future educational content.
+- Vitest.
+- Prettier.
 
-## Current Status
+Planned or prepared:
 
-Planning and repository foundation are in progress.
-
-See:
-
-- `docs/superpowers/specs/2026-07-08-ndjar-mvp-design.md`
-- `docs/superpowers/plans/2026-07-08-ndjar-mvp-foundation.md`
+- Redis and BullMQ for jobs.
+- MapLibre for future real map layers.
+- Expo SQLite for durable offline storage.
+- TanStack Query and Zustand for richer client state.
+- React Hook Form for production forms.
+- Remotion for education videos.
