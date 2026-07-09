@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createOfflineStore } from "./offlineStore";
 
 describe("createOfflineStore", () => {
-  it("loads the pilot snapshot from fixtures when no persisted snapshot exists", async () => {
+  it("loads the demonstration offline snapshot from local fixtures", async () => {
     const store = createOfflineStore();
 
     const snapshot = await store.loadSnapshot();
@@ -16,7 +16,7 @@ describe("createOfflineStore", () => {
     expect(snapshot.phExample.status).toBe("example");
   });
 
-  it("persists simple doctor and forum drafts in memory", async () => {
+  it("keeps simple doctor and forum drafts only in memory", async () => {
     const store = createOfflineStore();
 
     await store.saveDraft("doctor-question", "Mandioca com folhas amarelas");

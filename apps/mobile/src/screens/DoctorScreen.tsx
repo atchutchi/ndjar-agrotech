@@ -1,4 +1,3 @@
-import { shouldEscalateQuestion } from "@ndjar/domain";
 import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, TextInput, View } from "react-native";
 
@@ -6,44 +5,7 @@ import { Card, Chip, PrimaryButton, ScreenHeader } from "../components/ui";
 import type { PilotSnapshot } from "../storage/offlineStore";
 import { offlineStore } from "../storage/offlineStore";
 import { colors, commonStyles, spacing, typography } from "../theme";
-
-const SAFE_REVIEWED_TERMS = [
-  "ph",
-  "solo",
-  "amostra",
-  "mandioca",
-  "arroz",
-  "milho",
-  "feijao",
-  "calendario",
-  "plantar",
-] as const;
-
-function hasLocalReviewedAnswer(question: string): boolean {
-  const normalized = question
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase();
-
-  return SAFE_REVIEWED_TERMS.some((term) => normalized.includes(term));
-}
-
-function buildSafeAnswer(question: string): string {
-  const normalized = question
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase();
-
-  if (normalized.includes("ph") || normalized.includes("solo")) {
-    return "Regista a amostra, confirma comunidade e metodo, e espera validacao antes de decidir calagem ou produto.";
-  }
-
-  if (normalized.includes("calendario") || normalized.includes("plantar")) {
-    return "Usa o calendario local como guia de epoca e confirma no campo se as chuvas ja estao regulares.";
-  }
-
-  return "Regista cultura, comunidade e sintomas. A resposta local segura e observar a parcela, juntar fotos e evitar dosagens sem consultor.";
-}
+import { evaluateLocalDoctorQuestion } from "./doctorSafety";
 
 export function DoctorScreen({ snapshot }: { snapshot: PilotSnapshot | null }) {
   const [question, setQuestion] = useState("");
@@ -72,22 +34,20 @@ export function DoctorScreen({ snapshot }: { snapshot: PilotSnapshot | null }) {
       return;
     }
 
-    const decision = shouldEscalateQuestion({
+    const result = evaluateLocalDoctorQuestion({
       cropId: exampleCrop?.id,
-      hasReviewedAnswer: hasLocalReviewedAnswer(trimmedQuestion),
-      language: "pt",
+      question: trimmedQuestion,
       regionId: snapshot?.region.id,
-      text: trimmedQuestion,
     });
 
-    if (decision.shouldEscalate) {
+    if (result.decision.shouldEscalate) {
       setResult(
         "Escalar para consultor em 24h. Nao dar dose, mistura, produto ou prazo de colheita sem revisao.",
       );
       return;
     }
 
-    setResult(buildSafeAnswer(trimmedQuestion));
+    setResult(result.answer ?? "Escalar para consultor em 24h.");
   }
 
   return (

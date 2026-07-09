@@ -26,7 +26,7 @@ export function ProfileScreen({
     <ScrollView contentContainerStyle={commonStyles.content}>
       <ScreenHeader
         title="Perfil"
-        subtitle="Conta local e definicoes de sincronizacao."
+        subtitle="Conta do piloto e estado dos dados locais."
       />
 
       <Card>
@@ -49,7 +49,7 @@ export function ProfileScreen({
             <View style={{ flex: 1, gap: spacing.xs }}>
               <Text style={typography.sectionTitle}>Binta Cisse</Text>
               <Text style={typography.secondary}>Agricultora, Quinara</Text>
-              <Chip label="Offline pronto" />
+              <Chip label="Snapshot demo" />
             </View>
           </View>
         </View>
@@ -59,8 +59,8 @@ export function ProfileScreen({
         <View style={{ gap: spacing.md }}>
           <ListItem meta="Portugues" title="Idioma" />
           <ListItem
-            meta="Dados locais dos fixtures. API real fica para depois."
-            title="Sync/offline"
+            meta="Dados piloto carregados localmente. API real fica para depois."
+            title="Dados locais"
           />
           <ListItem
             meta={`${parcelCount ?? 0} parcelas estimadas no piloto`}
