@@ -259,6 +259,16 @@ Android local run:
 pnpm --filter @ndjar/mobile exec expo start --android --clear
 ```
 
+Android presentation APK:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\build-mobile-presentation-apk.ps1
+```
+
+This creates `outputs/ndjar-mvp-presentacao-offline-arm64.apk`. Use it for colleague demos on recent Android phones. It embeds `assets/index.android.bundle`, disables the development server path and avoids the Metro error shown by normal debug builds.
+
+Do not use `assembleDebug` output directly for field demos. A normal debug APK tries to connect to Metro at port `8081` and fails on a phone that is not connected to the development machine. For Play Store or a production pilot, use an EAS or CI signed release build with a real keystore, not this presentation APK.
+
 Web/admin Playwright smoke check:
 
 ```bash
@@ -326,12 +336,15 @@ Hover-only information is not acceptable for public web or admin.
 Planned deployment targets:
 
 - Mobile: Expo and EAS Android builds.
+- Mobile presentation builds: `tools/build-mobile-presentation-apk.ps1` creates an offline APK for demos, signed with the debug key and limited to `arm64-v8a`.
 - Web: Vercel or another Next.js-compatible host.
 - API: Render, Fly.io, Railway, DigitalOcean or a VPS.
 - Database: managed PostgreSQL with PostGIS.
 - Storage: S3-compatible object storage for photos and library assets.
 
 No external production account should be created without explicit permission.
+
+Before a real pilot, create a production Android keystore, move builds to EAS or CI, generate an AAB for Play Store distribution and test installation on at least two physical Android phones.
 
 ## Credits
 
