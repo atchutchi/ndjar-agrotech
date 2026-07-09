@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "N'djar",
+    "slug": "ndjar-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "platforms": ["android"],
+    "scheme": "ndjar",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.ndjar.mobile"
+    }
+  }
+}

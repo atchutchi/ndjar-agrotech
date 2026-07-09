@@ -8,6 +8,12 @@
 
 **Tech Stack:** TypeScript, pnpm workspaces, Expo, React Native, Next.js, NestJS, Drizzle, PostgreSQL, PostGIS, Redis, BullMQ, Zod, TanStack Query, Zustand, React Hook Form, MapLibre, Expo SQLite, Remotion.
 
+## Execution Status
+
+Tasks 1 to 8 are implemented and reviewed in branch `agent/mvp-foundation`.
+
+Task 9 is updating project documentation, running final verification and pushing the implementation branch to GitHub.
+
 ## Global Constraints
 
 Android mobile comes first.
@@ -320,6 +326,6 @@ Run: `git add README.md docs && git commit -m "docs: update project status"`
 
 - [ ] **Step 4: Push**
 
-Run: `git push -u origin main`
+Run: `git push -u origin agent/mvp-foundation`
 
-Expected: GitHub receives the latest commits.
+Expected: GitHub receives the latest implementation branch.

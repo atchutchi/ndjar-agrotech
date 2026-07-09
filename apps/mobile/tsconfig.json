@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM"],
+    "types": ["vitest/globals"],
+    "allowJs": false
+  },
+  "include": ["index.ts", "src/**/*.ts", "src/**/*.tsx"]
+}

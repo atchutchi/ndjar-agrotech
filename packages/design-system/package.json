@@ -1,0 +1,23 @@
+{
+  "name": "@ndjar/design-system",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/tokens.ts",
+      "default": "./src/tokens.ts"
+    }
+  },
+  "types": "./src/tokens.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "prettier --check \"src/**/*.ts\""
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.15",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
