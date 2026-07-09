@@ -49,7 +49,12 @@ Implemented in this branch:
 - PostgreSQL and PostGIS-ready schema for regions, communities, crops, samples, consultations, answer templates, notification jobs and USSD sessions.
 - NestJS API with health, regions, crops, consultations, assistant, sync and USSD preview routes.
 - Expo Android app foundation with Home, Map, Doctor, Forum and Profile tabs.
-- Mobile redesign pass with realistic generated agriculture imagery, icon tabs, Android back handling, clickable cards, visible consultant escalation tickets and satellite map view for the Quinara/Buba pilot.
+- Mobile redesign pass with realistic generated agriculture imagery, official N'djar logo assets, Android back handling, clickable module blocks, visible consultant escalation tickets and satellite map view for the Quinara/Buba pilot.
+- Subscription-gated mobile journey: calendar stays free, while map, crop information, forum and agricultural doctor flows are guarded by a 15,000 XOF farmer plan.
+- Simulated Orange Money and TeleTaku payment actions for MVP testing. No real payment provider is connected yet.
+- Realistic crop image assets for rice, cassava, maize, beans, pumpkin, okra, yam, sweet potato and leafy vegetables, replacing placeholder icons in crop pH cards.
+- Free interactive agricultural calendar extracted from `CALENDARIO AGRICULTURAL.xlsx`, with month selector, crop groups, colour-coded activity cells and incomplete data marked as pending.
+- About page with N'djar mission, values and SDG assets copied from the project material.
 - Next.js public web page, admin placeholder and health route.
 - Initial brand guide, wireframes and reusable design tokens.
 - Playwright added for repeatable web/admin smoke testing.
@@ -61,6 +66,7 @@ Important limitations:
 - No live USSD short code is connected.
 - No free-form AI advice is enabled.
 - Mobile offline storage is an in-memory foundation for now, not durable device storage.
+- Subscription state is local and simulated. Real authentication, entitlement checks, invoices and mobile money callbacks are still required.
 - Admin has no authentication and no write workflows yet.
 - Full 3D terrain/vector GIS is not in the Expo Go prototype. That likely needs a development build with MapLibre, Mapbox or MapTiler plus validated geodata.
 
@@ -72,13 +78,26 @@ Phase 2 adds USSD and short-code access. The backend already models USSD session
 
 Phase 3 adds GPS validation, stronger GIS layers, more regions, consultant operations, durable offline sync, payments and production deployment.
 
+The commercial MVP model is subscription-first. The calendar remains a free acquisition and trust feature. Technical modules that require field studies, agronomic validation or consultant time should sit behind the paid plan:
+
+- Free: agricultural calendar and basic project information.
+- Paid: interactive map, soil and pasture suitability, crop pH cards, forum participation and agricultural doctor consultation.
+- Simulated in this branch: 15,000 XOF farmer plan, Orange Money payment button and TeleTaku payment button.
+- Required before launch: payment provider approval, server-side entitlement checks, receipt records, refund policy, subscription expiry and consultant service-level rules.
+
 The main product risk is agronomic accuracy. The app must not present estimated or example data as validated truth. Every sensitive row keeps a source status such as `field_observed`, `estimated`, `example`, `self_reported`, `lab_validated` or `consultant_reviewed`.
 
 ## User Stories
 
 Farmer:
 
+- As a farmer, I want to open the calendar for free so that I can see seasonal tasks before deciding whether to subscribe.
+- As a farmer, I want to select a month in the agricultural calendar so that I can see what activities are active for cereals, rice, amendoim and tubers.
+- As a farmer, I want incomplete calendar data to be clearly marked so that I do not treat missing information as a recommendation.
+- As a farmer, I want to pay 15,000 XOF with Orange Money or TeleTaku so that I can unlock technical modules.
 - As a farmer in Quinara, I want to see my pilot region, communities and pH context so that I understand the current information before asking for help.
+- As a farmer, I want to tap a map zone and see soil, pH, crop and animal pasture guidance so that I can decide whether to cultivate, sample or request technical help.
+- As a farmer, I want crop pages to show recognisable crop images so that I do not confuse rice, maize, cassava or other crops.
 - As a farmer with weak internet, I want the app to open with saved pilot content so that I can keep using basic information offline.
 - As a farmer with a crop problem, I want to ask a question and either receive a safe predefined answer or have it escalated to an agricultural doctor.
 - As a farmer collecting a soil sample, I want the future app to store parcel, community, crop, coordinates and photo as a draft.
@@ -98,6 +117,7 @@ Admin:
 Public website visitor:
 
 - As a partner, funder or cooperative, I want to understand the pilot, services and contact path.
+- As a partner, I want to see the SDGs connected to N'djar so that I understand the impact positioning.
 - As a technical partner, I want to see that the MVP separates mobile, web, API, database, domain rules and fixtures.
 
 ## Skeleton
@@ -128,12 +148,17 @@ ndjar-agrotech/
 Implemented foundation:
 
 - Android app shell with five tabs.
-- Home dashboard for the pilot.
+- Home dashboard redesigned as large mobile module blocks: Calendar, Map, Subscription, Crop Information, Forum, Agricultural Doctor, About and Contact.
+- Subscription page with 15,000 XOF farmer plan and simulated Orange Money and TeleTaku activation.
+- Creative mobile agricultural calendar with a month carousel, active monthly tasks, selectable crop groups and a compact colour-coded table by phase.
 - Satellite map with interactive Buba marker, estimated community markers and an estimated pilot polygon.
-- Region, calendar, sample and crop detail flows reachable from mobile cards.
+- Region, calendar, sample and crop detail flows reachable from mobile cards, with Android hardware back navigation.
+- Crop detail cards with realistic generated crop images instead of generic placeholder icons.
 - Doctor triage screen using local deterministic safety rules, quick questions and local consultant ticket creation.
 - Forum topics with clickable discussion detail and offline draft saving.
 - Profile screen with clickable data, parcel, sample and sync states.
+- About page with official N'djar icon, mission, values and project SDGs.
+- Contact page for farmer, cooperative, NGO, government and partner support.
 - API assistant route with 24-hour escalation.
 - API offline sync route returning pilot fixture data.
 - Web homepage for the N'djar MVP and pilot.
@@ -144,6 +169,8 @@ Implemented foundation:
 Planned MVP features not complete yet:
 
 - Login and registration by phone.
+- Real subscription account model with start date, expiry date, renewal, failed payment handling and server-side access control.
+- Production Orange Money and TeleTaku integration.
 - Durable offline storage with Expo SQLite or equivalent.
 - Real map layer with validated coordinates.
 - True 3D terrain/vector GIS layer.
@@ -152,6 +179,14 @@ Planned MVP features not complete yet:
 - Moderated forum workflows.
 - Library downloads for offline reading.
 - Subscription and payment workflows.
+
+Calendar content currently extracted from the project Excel:
+
+- Cereals of sequeiro: sorgo, milho, arroz de sequeiro and niebé.
+- Rice in lowland areas.
+- Amendoim.
+- Tubers: mandioca, batata doce, inhame, manfafa and batata inglesa.
+- Legumes: visible as a pending group because the spreadsheet includes the group but does not mark months.
 
 ## SEO
 

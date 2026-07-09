@@ -11,7 +11,15 @@ import { offlineStore, type PilotSnapshot } from "./storage/offlineStore";
 import { colors, commonStyles } from "./theme";
 
 export type RouteName =
-  "root" | "region" | "crop" | "calendar" | "sample" | "forum-topic";
+  | "root"
+  | "region"
+  | "crop"
+  | "calendar"
+  | "sample"
+  | "subscription"
+  | "about"
+  | "contact"
+  | "forum-topic";
 
 export interface AppRoute {
   tab: TabId;
@@ -25,8 +33,33 @@ export type Navigate = (
   tabOverride?: TabId,
 ) => void;
 
+const premiumTabs = new Set<TabId>(["map", "doctor", "forum"]);
+const premiumRoutes = new Set<RouteName>(["crop", "sample", "forum-topic"]);
+
 function makeRoot(tab: TabId): AppRoute {
   return { name: "root", tab };
+}
+
+function shouldGateRoute(route: AppRoute, hasSubscription: boolean) {
+  if (hasSubscription) {
+    return false;
+  }
+
+  if (premiumRoutes.has(route.name)) {
+    return true;
+  }
+
+  return route.name === "root" && premiumTabs.has(route.tab);
+}
+
+function paywallRoute(target?: AppRoute): AppRoute {
+  return {
+    name: "subscription",
+    params: target
+      ? { targetTab: target.tab, targetName: target.name }
+      : undefined,
+    tab: "home",
+  };
 }
 
 function ActiveScreen({
@@ -36,6 +69,8 @@ function ActiveScreen({
   goBack,
   canGoBack,
   openTab,
+  hasSubscription,
+  activateSubscription,
 }: {
   current: AppRoute;
   snapshot: PilotSnapshot | null;
@@ -43,6 +78,8 @@ function ActiveScreen({
   goBack: () => void;
   canGoBack: boolean;
   openTab: (tabId: TabId) => void;
+  hasSubscription: boolean;
+  activateSubscription: () => void;
 }) {
   const sharedProps = {
     canGoBack,
@@ -50,6 +87,10 @@ function ActiveScreen({
     onBack: goBack,
     snapshot,
   };
+
+  if (current.name === "calendar") {
+    return <MapScreen {...sharedProps} route={current} />;
+  }
 
   if (current.tab === "map") {
     return <MapScreen {...sharedProps} route={current} />;
@@ -67,12 +108,21 @@ function ActiveScreen({
     return <ProfileScreen {...sharedProps} />;
   }
 
-  return <HomeScreen {...sharedProps} onOpenTab={openTab} />;
+  return (
+    <HomeScreen
+      {...sharedProps}
+      activateSubscription={activateSubscription}
+      hasSubscription={hasSubscription}
+      onOpenTab={openTab}
+      route={current}
+    />
+  );
 }
 
 export default function App() {
   const [stack, setStack] = useState<AppRoute[]>([makeRoot("home")]);
   const [snapshot, setSnapshot] = useState<PilotSnapshot | null>(null);
+  const [hasSubscription, setHasSubscription] = useState(false);
   const current = stack[stack.length - 1] ?? makeRoot("home");
 
   useEffect(() => {
@@ -111,7 +161,12 @@ export default function App() {
   }, [current.tab, stack.length]);
 
   function openTab(tabId: TabId) {
-    setStack([makeRoot(tabId)]);
+    const nextRoute = makeRoot(tabId);
+    setStack([
+      shouldGateRoute(nextRoute, hasSubscription)
+        ? paywallRoute(nextRoute)
+        : nextRoute,
+    ]);
   }
 
   function navigate(
@@ -119,14 +174,23 @@ export default function App() {
     params?: Record<string, string>,
     tabOverride?: TabId,
   ) {
+    const nextRoute = {
+      name,
+      params,
+      tab: tabOverride ?? current.tab,
+    };
+
     setStack((previousStack) => [
       ...previousStack,
-      {
-        name,
-        params,
-        tab: tabOverride ?? current.tab,
-      },
+      shouldGateRoute(nextRoute, hasSubscription)
+        ? paywallRoute(nextRoute)
+        : nextRoute,
     ]);
+  }
+
+  function activateSubscription() {
+    setHasSubscription(true);
+    setStack([makeRoot("home")]);
   }
 
   function goBack() {
@@ -148,9 +212,11 @@ export default function App() {
       <StatusBar backgroundColor={colors.background} barStyle="dark-content" />
       <View style={{ flex: 1 }}>
         <ActiveScreen
+          activateSubscription={activateSubscription}
           canGoBack={stack.length > 1 || current.tab !== "home"}
           current={current}
           goBack={goBack}
+          hasSubscription={hasSubscription}
           navigate={navigate}
           openTab={openTab}
           snapshot={snapshot}
