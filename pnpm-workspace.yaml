@@ -4,3 +4,4 @@ packages:
 # Vitest runs through Vite and needs esbuild's postinstall approved on fresh pnpm installs.
 allowBuilds:
   esbuild: true
+  sharp: true

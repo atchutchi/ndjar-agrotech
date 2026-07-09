@@ -1,0 +1,27 @@
+{
+  "name": "@ndjar/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "test": "vitest run",
+    "typecheck": "next typegen && tsc -p tsconfig.json --noEmit",
+    "lint": "prettier --check \"app/**/*.{ts,tsx,css}\" \"lib/**/*.{ts,tsx}\" \"next.config.ts\" \"package.json\" \"tsconfig.json\""
+  },
+  "dependencies": {
+    "@ndjar/domain": "workspace:*",
+    "@ndjar/fixtures": "workspace:*",
+    "next": "16.2.10",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.15",
+    "@types/react": "~19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
