@@ -193,7 +193,7 @@ export const phScale = {
     label: "Neutro",
     value: 7,
     color: colors.status.info,
-    status: status.info.label,
+    status: "Neutro",
   },
   alkaline: {
     kind: "range",

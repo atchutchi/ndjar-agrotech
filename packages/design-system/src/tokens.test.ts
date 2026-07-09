@@ -90,6 +90,8 @@ describe("N'djar design tokens", () => {
 
     expect(phScale.neutral.kind).toBe("point");
     expect(phScale.neutral.value).toBe(7);
+    expect(phScale.neutral.status).toBe("Neutro");
+    expect(phScale.neutral.status).not.toBe(status.info.label);
 
     expect(phScale.alkaline.range).toEqual([7, 14]);
     expect(phScale.alkaline.lowerBound).toBe("exclusive");
