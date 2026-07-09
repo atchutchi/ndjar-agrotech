@@ -34,3 +34,4 @@ temp/
 *.p8
 *.p12
 *.mobileprovision
+apps/web/next-env.d.ts
