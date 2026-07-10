@@ -6,6 +6,7 @@ import { CropsController } from "./modules/crops/crops.controller.js";
 import { RegionsController } from "./modules/regions/regions.controller.js";
 import { SyncController } from "./modules/sync/sync.controller.js";
 import { UssdPreviewController } from "./modules/ussd-preview/ussd-preview.controller.js";
+import { DatabaseModule } from "./modules/database/database.module.js";
 import { AssistantService } from "./services/assistant.service.js";
 import { PilotDataService } from "./services/pilot-data.service.js";
 
@@ -40,6 +41,7 @@ class StatusController {
 }
 
 @Module({
+  imports: [DatabaseModule],
   controllers: [
     StatusController,
     RegionsController,
