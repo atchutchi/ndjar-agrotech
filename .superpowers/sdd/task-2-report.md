@@ -42,3 +42,28 @@ Comandos executados:
 - `corepack pnpm --filter @ndjar/domain typecheck`: passou.
 - `corepack pnpm --filter @ndjar/domain lint`: passou.
 - `git diff --check`: passou.
+
+## Segunda correcção de revisão
+
+Foi alterado `EntitlementSnapshot.featureKey` de `string` para `PaidFeature`,
+protegendo o contrato do domínio contra valores de funcionalidades não
+suportadas.
+
+Foi alterado `canAccessAdmin` para receber `NdjarRole[]`. A alteração é
+compatível com todos os consumidores actuais, que são os testes do pacote.
+
+Foram adicionadas asserções estáticas em `auth.test.ts` para garantir que os
+dois contratos não voltam a alargar para `string`. Antes da alteração,
+`corepack pnpm --filter @ndjar/domain typecheck` falhou nas duas asserções.
+
+Não foi criado conversor de texto da base de dados porque não existe ainda uma
+fronteira de leitura que construa `EntitlementSnapshot` neste escopo. Quando
+essa integração existir, deverá validar e converter explicitamente o texto da
+base de dados para `PaidFeature` antes de criar o snapshot de domínio.
+
+Comandos executados:
+
+- `corepack pnpm --filter @ndjar/domain test -- auth.test.ts`: passou, 4 ficheiros de teste e 29 testes.
+- `corepack pnpm --filter @ndjar/domain typecheck`: passou.
+- `corepack pnpm --filter @ndjar/domain lint`: passou.
+- `git diff --check`: passou.

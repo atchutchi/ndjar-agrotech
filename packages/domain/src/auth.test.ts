@@ -1,6 +1,28 @@
 import { describe, expect, it } from "vitest";
 
-import { canAccessAdmin, hasEntitlement, PAID_FEATURES } from "./auth.js";
+import {
+  canAccessAdmin,
+  hasEntitlement,
+  PAID_FEATURES,
+  type EntitlementSnapshot,
+  type NdjarRole,
+  type PaidFeature,
+} from "./auth.js";
+
+type IsExact<Type, Expected> = [Type] extends [Expected]
+  ? [Expected] extends [Type]
+    ? true
+    : false
+  : false;
+
+type Assert<Type extends true> = Type;
+
+type _EntitlementFeatureKeyIsPaidFeature = Assert<
+  IsExact<EntitlementSnapshot["featureKey"], PaidFeature>
+>;
+type _AdminRolesAreNdjarRoles = Assert<
+  IsExact<Parameters<typeof canAccessAdmin>[0], NdjarRole[]>
+>;
 
 describe("auth domain rules", () => {
   it("allows only admin and super admin into admin surfaces", () => {

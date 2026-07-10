@@ -19,10 +19,10 @@ export type PaidFeature = (typeof PAID_FEATURES)[keyof typeof PAID_FEATURES];
 export interface EntitlementSnapshot {
   active: boolean;
   expiresAt: Date | null;
-  featureKey: string;
+  featureKey: PaidFeature;
 }
 
-export function canAccessAdmin(roleIds: string[]) {
+export function canAccessAdmin(roleIds: NdjarRole[]) {
   return (
     roleIds.includes(NDJAR_ROLES.admin) ||
     roleIds.includes(NDJAR_ROLES.superAdmin)
