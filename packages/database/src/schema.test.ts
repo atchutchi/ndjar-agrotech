@@ -1,7 +1,9 @@
 import { AGRONOMIC_SOURCE_STATUSES } from "@ndjar/domain";
+import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 
 import {
+  auditLogs,
   answerTemplates,
   authAccounts,
   calendarTasks,
@@ -64,5 +66,34 @@ describe("production auth schema", () => {
     expect(subscriptions).toBeDefined();
     expect(paymentAttempts).toBeDefined();
     expect(entitlements).toBeDefined();
+  });
+
+  it("enforces unique authentication identities and role assignments", () => {
+    const authAccountIndexes = getTableConfig(authAccounts).indexes;
+    const userRoleIndexes = getTableConfig(userRoles).indexes;
+
+    expect(
+      authAccountIndexes.some(
+        (index) =>
+          index.config.unique &&
+          index.config.columns
+            .map((column) => ("name" in column ? column.name : undefined))
+            .join(",") === "provider,login_identifier_hash",
+      ),
+    ).toBe(true);
+    expect(
+      userRoleIndexes.some(
+        (index) =>
+          index.config.unique &&
+          index.config.columns
+            .map((column) => ("name" in column ? column.name : undefined))
+            .join(",") === "user_id,role_id",
+      ),
+    ).toBe(true);
+  });
+
+  it("requires metadata for payment attempts and audit logs", () => {
+    expect(paymentAttempts.metadata.notNull).toBe(true);
+    expect(auditLogs.metadata.notNull).toBe(true);
   });
 });

@@ -9,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -472,18 +473,27 @@ export const userProfiles = pgTable("user_profiles", {
   ...timestampColumns(),
 });
 
-export const authAccounts = pgTable("auth_accounts", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id),
-  provider: authProviderEnum("provider").default("password").notNull(),
-  loginIdentifierHash: text("login_identifier_hash").notNull(),
-  passwordHash: text("password_hash"),
-  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
-  disabledAt: timestamp("disabled_at", { withTimezone: true }),
-  ...timestampColumns(),
-});
+export const authAccounts = pgTable(
+  "auth_accounts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    provider: authProviderEnum("provider").default("password").notNull(),
+    loginIdentifierHash: text("login_identifier_hash").notNull(),
+    passwordHash: text("password_hash"),
+    lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+    disabledAt: timestamp("disabled_at", { withTimezone: true }),
+    ...timestampColumns(),
+  },
+  (table) => [
+    uniqueIndex("auth_accounts_provider_login_identifier_hash_unique").on(
+      table.provider,
+      table.loginIdentifierHash,
+    ),
+  ],
+);
 
 export const verificationCodes = pgTable("verification_codes", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -517,17 +527,26 @@ export const roles = pgTable("roles", {
   ...timestampColumns(),
 });
 
-export const userRoles = pgTable("user_roles", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id),
-  roleId: text("role_id")
-    .notNull()
-    .references(() => roles.id),
-  assignedByUserId: uuid("assigned_by_user_id").references(() => users.id),
-  ...timestampColumns(),
-});
+export const userRoles = pgTable(
+  "user_roles",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    roleId: text("role_id")
+      .notNull()
+      .references(() => roles.id),
+    assignedByUserId: uuid("assigned_by_user_id").references(() => users.id),
+    ...timestampColumns(),
+  },
+  (table) => [
+    uniqueIndex("user_roles_user_id_role_id_unique").on(
+      table.userId,
+      table.roleId,
+    ),
+  ],
+);
 
 export const plans = pgTable("plans", {
   id: text("id").primaryKey(),
@@ -576,7 +595,10 @@ export const paymentAttempts = pgTable("payment_attempts", {
   externalReference: text("external_reference"),
   confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
   expiresAt: timestamp("expires_at", { withTimezone: true }),
-  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  metadata: jsonb("metadata")
+    .$type<Record<string, unknown>>()
+    .default({})
+    .notNull(),
   ...timestampColumns(),
 });
 
@@ -599,6 +621,9 @@ export const auditLogs = pgTable("audit_logs", {
   entityType: text("entity_type").notNull(),
   entityId: text("entity_id").notNull(),
   summary: text("summary").notNull(),
-  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  metadata: jsonb("metadata")
+    .$type<Record<string, unknown>>()
+    .default({})
+    .notNull(),
   ...timestampColumns(),
 });
