@@ -574,8 +574,8 @@ Modify `.env.example`:
 ```env
 DATABASE_URL=postgres://ndjar:ndjar@localhost:5432/ndjar
 NDJAR_DATABASE_MODE=fixture
-JWT_ACCESS_SECRET=replace-with-strong-secret
-JWT_REFRESH_SECRET=replace-with-strong-secret
+JWT_ACCESS_SECRET=dev-access-secret-change-before-production
+JWT_REFRESH_SECRET=dev-refresh-secret-change-before-production
 ADMIN_APP_URL=http://localhost:3000
 ```
 
@@ -807,6 +807,10 @@ export class AuthRepository {
   ): Promise<AuthUserRecord | null> {
     throw new Error("findByIdentifierHash must query auth_accounts");
   }
+
+  async createRefreshToken(userId: string): Promise<string> {
+    throw new Error("createRefreshToken must persist a hashed refresh token");
+  }
 }
 ```
 
@@ -861,7 +865,7 @@ export class AuthService {
 
     return {
       accessToken: await signAccessToken({ roles: user.roles, sub: user.id }),
-      refreshToken: "replace-with-persisted-refresh-token-in-same-task",
+      refreshToken: await this.repository.createRefreshToken(user.id),
       user: {
         displayName: user.displayName,
         id: user.id,
@@ -1433,8 +1437,8 @@ Production foundation environment:
 ```bash
 DATABASE_URL=postgres://ndjar:ndjar@localhost:5432/ndjar
 NDJAR_DATABASE_MODE=fixture
-JWT_ACCESS_SECRET=replace-with-strong-secret
-JWT_REFRESH_SECRET=replace-with-strong-secret
+JWT_ACCESS_SECRET=dev-access-secret-change-before-production
+JWT_REFRESH_SECRET=dev-refresh-secret-change-before-production
 NDJAR_API_URL=http://localhost:3333
 ```
 ````
