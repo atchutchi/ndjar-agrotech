@@ -3,15 +3,25 @@ import { describe, expect, it } from "vitest";
 
 import {
   answerTemplates,
+  authAccounts,
   calendarTasks,
   communities,
   consultationResponses,
   cropPresence,
   cropPresenceGroupObservations,
+  entitlements,
+  paymentAttempts,
+  plans,
+  refreshTokens,
   regions,
+  roles,
   soilSamples,
   sourceStatusEnum,
+  subscriptions,
   ussdSessions,
+  userProfiles,
+  userRoles,
+  verificationCodes,
 } from "./schema.js";
 
 describe("database schema", () => {
@@ -36,5 +46,23 @@ describe("database schema", () => {
     expect(ussdSessions).toHaveProperty("route");
     expect(ussdSessions).toHaveProperty("currentScreen");
     expect(ussdSessions).toHaveProperty("status");
+  });
+});
+
+describe("production auth schema", () => {
+  it("exports auth and role tables", () => {
+    expect(userProfiles).toBeDefined();
+    expect(authAccounts).toBeDefined();
+    expect(verificationCodes).toBeDefined();
+    expect(refreshTokens).toBeDefined();
+    expect(roles).toBeDefined();
+    expect(userRoles).toBeDefined();
+  });
+
+  it("exports subscription and payment primitives", () => {
+    expect(plans).toBeDefined();
+    expect(subscriptions).toBeDefined();
+    expect(paymentAttempts).toBeDefined();
+    expect(entitlements).toBeDefined();
   });
 });

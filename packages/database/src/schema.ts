@@ -110,6 +110,39 @@ export const ussdSessionStatusEnum = pgEnum("ussd_session_status", [
   "expired",
   "abandoned",
 ]);
+export const authProviderEnum = pgEnum("auth_provider", [
+  "password",
+  "sms_code",
+  "admin_invite",
+]);
+export const verificationPurposeEnum = pgEnum("verification_purpose", [
+  "account_verification",
+  "password_reset",
+  "phone_change",
+]);
+export const subscriptionStatusEnum = pgEnum("subscription_status", [
+  "trial",
+  "active",
+  "past_due",
+  "expired",
+  "cancelled",
+]);
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "pending",
+  "confirmed",
+  "failed",
+  "expired",
+  "refunded",
+]);
+export const auditActionEnum = pgEnum("audit_action", [
+  "create",
+  "update",
+  "delete",
+  "publish",
+  "login",
+  "logout",
+  "payment_confirmed",
+]);
 
 type PostgisGeometryType = "Point" | "Polygon" | "MultiPolygon";
 
@@ -420,5 +453,152 @@ export const notificationJobs = pgTable("notification_jobs", {
     .default({})
     .notNull(),
   lastError: text("last_error"),
+  ...timestampColumns(),
+});
+
+export const userProfiles = pgTable("user_profiles", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id),
+  fullName: text("full_name"),
+  email: text("email"),
+  phoneNumberHash: text("phone_number_hash"),
+  phoneCountryCode: text("phone_country_code").default("245").notNull(),
+  regionId: text("region_id").references(() => regions.id),
+  communityId: text("community_id").references(() => communities.id),
+  preferredLanguage: text("preferred_language").default("pt").notNull(),
+  avatarStorageKey: text("avatar_storage_key"),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  ...timestampColumns(),
+});
+
+export const authAccounts = pgTable("auth_accounts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  provider: authProviderEnum("provider").default("password").notNull(),
+  loginIdentifierHash: text("login_identifier_hash").notNull(),
+  passwordHash: text("password_hash"),
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+  disabledAt: timestamp("disabled_at", { withTimezone: true }),
+  ...timestampColumns(),
+});
+
+export const verificationCodes = pgTable("verification_codes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id),
+  purpose: verificationPurposeEnum("purpose").notNull(),
+  targetHash: text("target_hash").notNull(),
+  codeHash: text("code_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  attempts: integer("attempts").default(0).notNull(),
+  ...timestampColumns(),
+});
+
+export const refreshTokens = pgTable("refresh_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  tokenHash: text("token_hash").notNull(),
+  userAgent: text("user_agent"),
+  ipHash: text("ip_hash"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  ...timestampColumns(),
+});
+
+export const roles = pgTable("roles", {
+  id: text("id").primaryKey(),
+  label: text("label").notNull(),
+  description: text("description").notNull(),
+  ...timestampColumns(),
+});
+
+export const userRoles = pgTable("user_roles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  roleId: text("role_id")
+    .notNull()
+    .references(() => roles.id),
+  assignedByUserId: uuid("assigned_by_user_id").references(() => users.id),
+  ...timestampColumns(),
+});
+
+export const plans = pgTable("plans", {
+  id: text("id").primaryKey(),
+  label: text("label").notNull(),
+  priceXof: integer("price_xof").notNull(),
+  interval: text("interval").default("month").notNull(),
+  includedConsultations: integer("included_consultations").default(3).notNull(),
+  active: boolean("active").default(true).notNull(),
+  ...timestampColumns(),
+});
+
+export const subscriptions = pgTable("subscriptions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  planId: text("plan_id")
+    .notNull()
+    .references(() => plans.id),
+  status: subscriptionStatusEnum("status").default("active").notNull(),
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+  ...timestampColumns(),
+});
+
+export const paymentProviders = pgTable("payment_providers", {
+  id: text("id").primaryKey(),
+  label: text("label").notNull(),
+  active: boolean("active").default(true).notNull(),
+  logoStorageKey: text("logo_storage_key"),
+  ...timestampColumns(),
+});
+
+export const paymentAttempts = pgTable("payment_attempts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  providerId: text("provider_id")
+    .notNull()
+    .references(() => paymentProviders.id),
+  planId: text("plan_id").references(() => plans.id),
+  amountXof: integer("amount_xof").notNull(),
+  status: paymentStatusEnum("status").default("pending").notNull(),
+  externalReference: text("external_reference"),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  ...timestampColumns(),
+});
+
+export const entitlements = pgTable("entitlements", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id),
+  subscriptionId: uuid("subscription_id").references(() => subscriptions.id),
+  featureKey: text("feature_key").notNull(),
+  active: boolean("active").default(true).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  ...timestampColumns(),
+});
+
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  actorUserId: uuid("actor_user_id").references(() => users.id),
+  action: auditActionEnum("action").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  summary: text("summary").notNull(),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
   ...timestampColumns(),
 });
