@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   UnauthorizedException,
@@ -33,6 +34,15 @@ function verificationCode() {
   return String(randomInt(100000, 999999));
 }
 
+function isUniqueViolation(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "23505"
+  );
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -42,12 +52,25 @@ export class AuthService {
   async register(input: RegisterInput) {
     const code = verificationCode();
     const passwordHash = await hash(input.password);
-    const result = await this.repository.createFarmerAccount({
-      displayName: input.displayName,
-      identifierHash: stableHash(input.phone),
-      passwordHash,
-      verificationCodeHash: await hash(code),
-    });
+    let result: { userId: string };
+
+    try {
+      result = await this.repository.createFarmerAccount({
+        displayName: input.displayName,
+        email: input.email,
+        identifierHash: stableHash(input.phone),
+        passwordHash,
+        verificationCodeHash: await hash(code),
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException(
+          "Ja existe uma conta com este numero de telefone.",
+        );
+      }
+
+      throw error;
+    }
 
     return {
       devVerificationCode:

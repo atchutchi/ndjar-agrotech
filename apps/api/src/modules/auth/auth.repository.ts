@@ -9,9 +9,9 @@ import {
   verificationCodes,
 } from "@ndjar/database";
 import { NDJAR_ROLES } from "@ndjar/domain";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { hash, verify } from "argon2";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 
 import { DATABASE } from "../database/database.module.js";
 
@@ -28,6 +28,8 @@ export interface AuthSessionRecord {
   refreshToken: string;
   user: AuthUserRecord;
 }
+
+export const VERIFICATION_CODE_MAX_ATTEMPTS = 5;
 
 const roleSeed = [
   {
@@ -47,8 +49,29 @@ const roleSeed = [
   },
 ];
 
-function newRefreshToken() {
-  return randomBytes(48).toString("base64url");
+function newRefreshTokenParts() {
+  const selector = randomUUID();
+  const secret = randomBytes(48).toString("base64url");
+
+  return {
+    secret,
+    selector,
+    token: `${selector}.${secret}`,
+  };
+}
+
+export function parseRefreshToken(
+  token: string,
+): { secret: string; selector: string } | null {
+  const separatorIndex = token.indexOf(".");
+  if (separatorIndex <= 0 || separatorIndex === token.length - 1) {
+    return null;
+  }
+
+  return {
+    secret: token.slice(separatorIndex + 1),
+    selector: token.slice(0, separatorIndex),
+  };
 }
 
 function expiresInMinutes(minutes: number) {
@@ -65,6 +88,7 @@ export class AuthRepository {
 
   async createFarmerAccount(input: {
     displayName: string;
+    email?: string;
     identifierHash: string;
     passwordHash: string;
     verificationCodeHash: string;
@@ -88,6 +112,7 @@ export class AuthRepository {
       }
 
       await tx.insert(userProfiles).values({
+        email: input.email ?? null,
         userId: createdUser.id,
         fullName: input.displayName,
         phoneNumberHash: input.identifierHash,
@@ -174,25 +199,31 @@ export class AuthRepository {
   }
 
   async createRefreshToken(userId: string): Promise<string> {
-    const token = newRefreshToken();
+    const token = newRefreshTokenParts();
 
     await this.requireDatabase()
       .insert(refreshTokens)
       .values({
+        id: token.selector,
         userId,
-        tokenHash: await hash(token),
+        tokenHash: await hash(token.secret),
         expiresAt: expiresInDays(30),
       });
 
-    return token;
+    return token.token;
   }
 
   async rotateRefreshToken(
     refreshToken: string,
   ): Promise<AuthSessionRecord | null> {
     const database = this.requireDatabase();
+    const parsedToken = parseRefreshToken(refreshToken);
+    if (!parsedToken) {
+      return null;
+    }
 
     return database.transaction(async (tx) => {
+      const now = new Date();
       const rows = await tx
         .select({
           defaultRole: users.role,
@@ -210,36 +241,52 @@ export class AuthRepository {
         .leftJoin(roles, eq(roles.id, userRoles.roleId))
         .where(
           and(
+            eq(refreshTokens.id, parsedToken.selector),
             isNull(refreshTokens.revokedAt),
-            gt(refreshTokens.expiresAt, new Date()),
+            gt(refreshTokens.expiresAt, now),
             eq(users.isActive, true),
           ),
         );
 
-      const matchingRows = await this.findRowsForRefreshToken(
-        rows,
-        refreshToken,
-      );
-      const user = this.toAuthUserRecord(matchingRows);
-      const tokenId = matchingRows[0]?.refreshTokenId;
-      if (!user || !tokenId) {
+      const firstRow = rows[0];
+      if (
+        !firstRow ||
+        !(await verify(firstRow.refreshTokenHash, parsedToken.secret))
+      ) {
         return null;
       }
 
-      await tx
+      const [claimedToken] = await tx
         .update(refreshTokens)
-        .set({ revokedAt: new Date() })
-        .where(eq(refreshTokens.id, tokenId));
+        .set({ revokedAt: now })
+        .where(
+          and(
+            eq(refreshTokens.id, parsedToken.selector),
+            isNull(refreshTokens.revokedAt),
+            gt(refreshTokens.expiresAt, now),
+          ),
+        )
+        .returning({ id: refreshTokens.id });
 
-      const nextRefreshToken = newRefreshToken();
+      if (!claimedToken) {
+        return null;
+      }
+
+      const user = this.toAuthUserRecord(rows);
+      if (!user) {
+        return null;
+      }
+
+      const nextRefreshToken = newRefreshTokenParts();
       await tx.insert(refreshTokens).values({
+        id: nextRefreshToken.selector,
         userId: user.id,
-        tokenHash: await hash(nextRefreshToken),
+        tokenHash: await hash(nextRefreshToken.secret),
         expiresAt: expiresInDays(30),
       });
 
       return {
-        refreshToken: nextRefreshToken,
+        refreshToken: nextRefreshToken.token,
         user,
       };
     });
@@ -247,8 +294,13 @@ export class AuthRepository {
 
   async revokeRefreshToken(refreshToken: string): Promise<void> {
     const database = this.requireDatabase();
+    const parsedToken = parseRefreshToken(refreshToken);
+    if (!parsedToken) {
+      return;
+    }
 
     await database.transaction(async (tx) => {
+      const now = new Date();
       const rows = await tx
         .select({
           refreshTokenHash: refreshTokens.tokenHash,
@@ -257,20 +309,30 @@ export class AuthRepository {
         .from(refreshTokens)
         .where(
           and(
+            eq(refreshTokens.id, parsedToken.selector),
             isNull(refreshTokens.revokedAt),
-            gt(refreshTokens.expiresAt, new Date()),
+            gt(refreshTokens.expiresAt, now),
           ),
         );
 
-      for (const row of rows) {
-        if (await verify(row.refreshTokenHash, refreshToken)) {
-          await tx
-            .update(refreshTokens)
-            .set({ revokedAt: new Date() })
-            .where(eq(refreshTokens.id, row.refreshTokenId));
-          return;
-        }
+      const firstRow = rows[0];
+      if (
+        !firstRow ||
+        !(await verify(firstRow.refreshTokenHash, parsedToken.secret))
+      ) {
+        return;
       }
+
+      await tx
+        .update(refreshTokens)
+        .set({ revokedAt: now })
+        .where(
+          and(
+            eq(refreshTokens.id, parsedToken.selector),
+            isNull(refreshTokens.revokedAt),
+            gt(refreshTokens.expiresAt, now),
+          ),
+        );
     });
   }
 
@@ -281,8 +343,10 @@ export class AuthRepository {
     const database = this.requireDatabase();
 
     return database.transaction(async (tx) => {
+      const now = new Date();
       const rows = await tx
         .select({
+          attempts: verificationCodes.attempts,
           codeHash: verificationCodes.codeHash,
           id: verificationCodes.id,
         })
@@ -292,22 +356,50 @@ export class AuthRepository {
             eq(verificationCodes.userId, input.userId),
             eq(verificationCodes.purpose, "account_verification"),
             isNull(verificationCodes.consumedAt),
-            gt(verificationCodes.expiresAt, new Date()),
+            gt(verificationCodes.expiresAt, now),
+            lt(verificationCodes.attempts, VERIFICATION_CODE_MAX_ATTEMPTS),
           ),
         );
 
       for (const row of rows) {
         if (await verify(row.codeHash, input.code)) {
-          await tx
+          const [consumedCode] = await tx
             .update(verificationCodes)
-            .set({ consumedAt: new Date() })
-            .where(eq(verificationCodes.id, row.id));
+            .set({ consumedAt: now })
+            .where(
+              and(
+                eq(verificationCodes.id, row.id),
+                isNull(verificationCodes.consumedAt),
+                gt(verificationCodes.expiresAt, now),
+                lt(verificationCodes.attempts, VERIFICATION_CODE_MAX_ATTEMPTS),
+              ),
+            )
+            .returning({ id: verificationCodes.id });
+
+          if (!consumedCode) {
+            return false;
+          }
+
           await tx
             .update(userProfiles)
-            .set({ verifiedAt: new Date() })
+            .set({ verifiedAt: now })
             .where(eq(userProfiles.userId, input.userId));
           return true;
         }
+      }
+
+      for (const row of rows) {
+        await tx
+          .update(verificationCodes)
+          .set({ attempts: sql`${verificationCodes.attempts} + 1` })
+          .where(
+            and(
+              eq(verificationCodes.id, row.id),
+              isNull(verificationCodes.consumedAt),
+              gt(verificationCodes.expiresAt, now),
+              lt(verificationCodes.attempts, VERIFICATION_CODE_MAX_ATTEMPTS),
+            ),
+          );
       }
 
       return false;
@@ -323,15 +415,29 @@ export class AuthRepository {
       return;
     }
 
-    await this.requireDatabase()
-      .insert(verificationCodes)
-      .values({
+    await this.requireDatabase().transaction(async (tx) => {
+      const now = new Date();
+
+      await tx
+        .update(verificationCodes)
+        .set({ consumedAt: now })
+        .where(
+          and(
+            eq(verificationCodes.targetHash, input.identifierHash),
+            eq(verificationCodes.purpose, "password_reset"),
+            isNull(verificationCodes.consumedAt),
+            gt(verificationCodes.expiresAt, now),
+          ),
+        );
+
+      await tx.insert(verificationCodes).values({
         userId: user.id,
         purpose: "password_reset",
         targetHash: input.identifierHash,
         codeHash: input.codeHash,
         expiresAt: expiresInMinutes(15),
       });
+    });
   }
 
   async resetPassword(input: {
@@ -342,8 +448,10 @@ export class AuthRepository {
     const database = this.requireDatabase();
 
     return database.transaction(async (tx) => {
+      const now = new Date();
       const rows = await tx
         .select({
+          attempts: verificationCodes.attempts,
           codeHash: verificationCodes.codeHash,
           id: verificationCodes.id,
           userId: verificationCodes.userId,
@@ -354,13 +462,31 @@ export class AuthRepository {
             eq(verificationCodes.targetHash, input.identifierHash),
             eq(verificationCodes.purpose, "password_reset"),
             isNull(verificationCodes.consumedAt),
-            gt(verificationCodes.expiresAt, new Date()),
+            gt(verificationCodes.expiresAt, now),
+            lt(verificationCodes.attempts, VERIFICATION_CODE_MAX_ATTEMPTS),
           ),
         );
 
       for (const row of rows) {
         if (!row.userId || !(await verify(row.codeHash, input.code))) {
           continue;
+        }
+
+        const [consumedCode] = await tx
+          .update(verificationCodes)
+          .set({ consumedAt: now })
+          .where(
+            and(
+              eq(verificationCodes.id, row.id),
+              isNull(verificationCodes.consumedAt),
+              gt(verificationCodes.expiresAt, now),
+              lt(verificationCodes.attempts, VERIFICATION_CODE_MAX_ATTEMPTS),
+            ),
+          )
+          .returning({ id: verificationCodes.id });
+
+        if (!consumedCode) {
+          return false;
         }
 
         await tx
@@ -373,11 +499,31 @@ export class AuthRepository {
             ),
           );
         await tx
-          .update(verificationCodes)
-          .set({ consumedAt: new Date() })
-          .where(eq(verificationCodes.id, row.id));
+          .update(refreshTokens)
+          .set({ revokedAt: now })
+          .where(
+            and(
+              eq(refreshTokens.userId, row.userId),
+              isNull(refreshTokens.revokedAt),
+              gt(refreshTokens.expiresAt, now),
+            ),
+          );
 
         return true;
+      }
+
+      for (const row of rows) {
+        await tx
+          .update(verificationCodes)
+          .set({ attempts: sql`${verificationCodes.attempts} + 1` })
+          .where(
+            and(
+              eq(verificationCodes.id, row.id),
+              isNull(verificationCodes.consumedAt),
+              gt(verificationCodes.expiresAt, now),
+              lt(verificationCodes.attempts, VERIFICATION_CODE_MAX_ATTEMPTS),
+            ),
+          );
       }
 
       return false;
@@ -392,20 +538,6 @@ export class AuthRepository {
     }
 
     return this.database;
-  }
-
-  private async findRowsForRefreshToken<
-    T extends { refreshTokenHash: string; refreshTokenId: string },
-  >(rows: T[], refreshToken: string): Promise<T[]> {
-    for (const row of rows) {
-      if (await verify(row.refreshTokenHash, refreshToken)) {
-        return rows.filter(
-          (candidate) => candidate.refreshTokenId === row.refreshTokenId,
-        );
-      }
-    }
-
-    return [];
   }
 
   private toAuthUserRecord(
