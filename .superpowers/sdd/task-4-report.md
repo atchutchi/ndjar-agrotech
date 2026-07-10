@@ -307,3 +307,124 @@ Os testes novos continuam sem PostgreSQL real. A semantica de replay foi coberta
 Nao foram adicionados logs de codigos, tokens ou segredos.
 
 Nao alterei `.superpowers/sdd/progress.md`.
+
+## Final review fix
+
+### RED
+
+Foram adicionados testes em `apps/api/src/modules/auth/auth.repository.test.ts` para rejeitar tokens de refresh com selector nao UUID, UUID nao canonico, segredo fora de base64url, segredo curto, segredo longo e pontos adicionais. Tambem foi adicionado um teste para confirmar que `rotateRefreshToken` e `revokeRefreshToken` nao iniciam transaccao para token invalido.
+
+Comando:
+
+```bash
+corepack pnpm --filter @ndjar/api test -- auth.repository.test.ts
+```
+
+Resultado observado antes da implementacao:
+
+```text
+Test Files  1 failed | 4 passed (5)
+Tests       4 failed | 35 passed (39)
+```
+
+Falhas relevantes:
+
+```text
+expected parseRefreshToken(`not-a-uuid...`) to be null
+expected segredo curto a ser rejeitado
+expected token com ponto adicional a ser rejeitado
+expected rotateRefreshToken(token invalido) to be null
+```
+
+### Decisao
+
+`parseRefreshToken` passou a aceitar apenas o formato emitido por `newRefreshTokenParts`: `selector.secret`, com selector UUID canonico em minusculas e segredo base64url com exactamente 64 caracteres, que e o comprimento produzido por `randomBytes(48).toString("base64url")`.
+
+A validacao ficou no repository, antes de `requireDatabase()` e antes de `transaction()`. Nao apertei `refreshSchema` nem `logoutSchema` para evitar duplicar regex fragil entre DTO e persistence. A camada de seguranca que protege PostgreSQL fica assim imediatamente antes da query, e o service continua a receber comportamento controlado: refresh invalido devolve `null`, logout invalido nao faz nada.
+
+Nao foi alterado o formato emitido de tokens validos.
+
+### GREEN
+
+Comando:
+
+```bash
+corepack pnpm --filter @ndjar/api test -- auth.repository.test.ts
+```
+
+Resultado:
+
+```text
+Test Files  5 passed (5)
+Tests       39 passed (39)
+```
+
+Comando:
+
+```bash
+corepack pnpm --filter @ndjar/api test -- auth.controller.test.ts
+```
+
+Resultado:
+
+```text
+Test Files  5 passed (5)
+Tests       39 passed (39)
+```
+
+Comando:
+
+```bash
+corepack pnpm --filter @ndjar/api test
+```
+
+Resultado:
+
+```text
+Test Files  5 passed (5)
+Tests       39 passed (39)
+```
+
+Comando:
+
+```bash
+corepack pnpm --filter @ndjar/api typecheck
+```
+
+Resultado:
+
+```text
+tsc -p tsconfig.json --noEmit
+```
+
+Exit code: 0.
+
+Comando:
+
+```bash
+corepack pnpm --filter @ndjar/api lint
+```
+
+Resultado:
+
+```text
+All matched files use Prettier code style!
+```
+
+Comando:
+
+```bash
+git diff --check
+```
+
+Resultado:
+
+```text
+Exit code: 0
+```
+
+Avisos observados:
+
+```text
+LF will be replaced by CRLF the next time Git touches it
+```

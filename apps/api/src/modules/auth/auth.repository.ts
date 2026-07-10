@@ -30,6 +30,11 @@ export interface AuthSessionRecord {
 }
 
 export const VERIFICATION_CODE_MAX_ATTEMPTS = 5;
+export const REFRESH_TOKEN_SECRET_LENGTH = 64;
+
+const refreshTokenSelectorPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const refreshTokenSecretPattern = /^[A-Za-z0-9_-]+$/;
 
 const roleSeed = [
   {
@@ -63,14 +68,30 @@ function newRefreshTokenParts() {
 export function parseRefreshToken(
   token: string,
 ): { secret: string; selector: string } | null {
-  const separatorIndex = token.indexOf(".");
-  if (separatorIndex <= 0 || separatorIndex === token.length - 1) {
+  const parts = token.split(".");
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  const [selector, secret] = parts;
+  if (!selector || !secret) {
+    return null;
+  }
+
+  if (!refreshTokenSelectorPattern.test(selector)) {
+    return null;
+  }
+
+  if (
+    secret.length !== REFRESH_TOKEN_SECRET_LENGTH ||
+    !refreshTokenSecretPattern.test(secret)
+  ) {
     return null;
   }
 
   return {
-    secret: token.slice(separatorIndex + 1),
-    selector: token.slice(0, separatorIndex),
+    secret,
+    selector,
   };
 }
 
@@ -216,12 +237,12 @@ export class AuthRepository {
   async rotateRefreshToken(
     refreshToken: string,
   ): Promise<AuthSessionRecord | null> {
-    const database = this.requireDatabase();
     const parsedToken = parseRefreshToken(refreshToken);
     if (!parsedToken) {
       return null;
     }
 
+    const database = this.requireDatabase();
     return database.transaction(async (tx) => {
       const now = new Date();
       const rows = await tx
@@ -293,12 +314,12 @@ export class AuthRepository {
   }
 
   async revokeRefreshToken(refreshToken: string): Promise<void> {
-    const database = this.requireDatabase();
     const parsedToken = parseRefreshToken(refreshToken);
     if (!parsedToken) {
       return;
     }
 
+    const database = this.requireDatabase();
     await database.transaction(async (tx) => {
       const now = new Date();
       const rows = await tx

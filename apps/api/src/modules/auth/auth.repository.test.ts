@@ -39,15 +39,67 @@ function repositoryWithTransaction(tx: unknown) {
   } as never);
 }
 
+const validRefreshTokenSelector = "01234567-89ab-4cde-8f01-23456789abcd";
+const validRefreshTokenSecret = "A".repeat(64);
+const validRefreshToken = `${validRefreshTokenSelector}.${validRefreshTokenSecret}`;
+
 describe("AuthRepository refresh tokens", () => {
-  it("extrai selector publico e segredo sem aceitar formatos ambiguos", () => {
-    expect(parseRefreshToken("selector.secret-value")).toEqual({
-      secret: "secret-value",
-      selector: "selector",
+  it("extrai apenas selector UUID canonico e segredo base64url no formato emitido", () => {
+    expect(parseRefreshToken(validRefreshToken)).toEqual({
+      secret: validRefreshTokenSecret,
+      selector: validRefreshTokenSelector,
     });
     expect(parseRefreshToken("sem-separador")).toBeNull();
-    expect(parseRefreshToken("selector.")).toBeNull();
-    expect(parseRefreshToken(".secret")).toBeNull();
+    expect(parseRefreshToken(`${validRefreshTokenSelector}.`)).toBeNull();
+    expect(parseRefreshToken(`.${validRefreshTokenSecret}`)).toBeNull();
+  });
+
+  it("rejeita selector que nao seja UUID canonico", () => {
+    expect(
+      parseRefreshToken(`not-a-uuid.${validRefreshTokenSecret}`),
+    ).toBeNull();
+    expect(
+      parseRefreshToken(
+        `01234567-89AB-4CDE-8F01-23456789ABCD.${validRefreshTokenSecret}`,
+      ),
+    ).toBeNull();
+    expect(
+      parseRefreshToken(
+        `0123456789ab4cde8f0123456789abcd.${validRefreshTokenSecret}`,
+      ),
+    ).toBeNull();
+  });
+
+  it("rejeita segredo que nao seja base64url com o comprimento emitido", () => {
+    expect(
+      parseRefreshToken(`${validRefreshTokenSelector}.${"A".repeat(63)}`),
+    ).toBeNull();
+    expect(
+      parseRefreshToken(`${validRefreshTokenSelector}.${"A".repeat(65)}`),
+    ).toBeNull();
+    expect(
+      parseRefreshToken(`${validRefreshTokenSelector}.${"A".repeat(63)}+`),
+    ).toBeNull();
+  });
+
+  it("rejeita tokens com pontos adicionais", () => {
+    expect(parseRefreshToken(`${validRefreshToken}.extra`)).toBeNull();
+  });
+
+  it("nao inicia transaccao ao rodar ou revogar token invalido", async () => {
+    const database = {
+      transaction: vi.fn(),
+    };
+    const repository = new AuthRepository(database as never);
+
+    await expect(
+      repository.rotateRefreshToken(`not-a-uuid.${validRefreshTokenSecret}`),
+    ).resolves.toBeNull();
+    await expect(
+      repository.revokeRefreshToken(`not-a-uuid.${validRefreshTokenSecret}`),
+    ).resolves.toBeUndefined();
+
+    expect(database.transaction).not.toHaveBeenCalled();
   });
 
   it("rejeita replay quando a reclamacao atomica ja nao devolve linha", async () => {
@@ -57,8 +109,8 @@ describe("AuthRepository refresh tokens", () => {
         displayName: "Binta Cisse",
         id: "user-1",
         passwordHash: "password-hash",
-        refreshTokenHash: await hash("secret-value"),
-        refreshTokenId: "selector",
+        refreshTokenHash: await hash(validRefreshTokenSecret),
+        refreshTokenId: validRefreshTokenSelector,
         roleId: "farmer",
       },
     ]);
@@ -70,9 +122,8 @@ describe("AuthRepository refresh tokens", () => {
       update: vi.fn(() => update),
     };
 
-    const result = await repositoryWithTransaction(tx).rotateRefreshToken(
-      "selector.secret-value",
-    );
+    const result =
+      await repositoryWithTransaction(tx).rotateRefreshToken(validRefreshToken);
 
     expect(result).toBeNull();
     expect(update.where).toHaveBeenCalled();
