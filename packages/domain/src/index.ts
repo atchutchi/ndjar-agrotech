@@ -26,3 +26,4 @@ export {
   type UssdSessionInput,
   type UssdSessionState,
 } from "./ussd.js";
+export * from "./auth.js";
