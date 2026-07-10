@@ -1,6 +1,7 @@
 import { Controller, Get, Module } from "@nestjs/common";
 
 import { AssistantController } from "./modules/assistant/assistant.controller.js";
+import { AuthModule } from "./modules/auth/auth.module.js";
 import { ConsultationsController } from "./modules/consultations/consultations.controller.js";
 import { CropsController } from "./modules/crops/crops.controller.js";
 import { RegionsController } from "./modules/regions/regions.controller.js";
@@ -24,6 +25,7 @@ class StatusController {
         "/crops",
         "/consultations",
         "/assistant/ask",
+        "/auth/register",
         "/sync",
         "/ussd-preview",
       ],
@@ -41,7 +43,7 @@ class StatusController {
 }
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, AuthModule],
   controllers: [
     StatusController,
     RegionsController,
