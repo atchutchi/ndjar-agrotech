@@ -9,21 +9,22 @@ The product helps farmers, field teams and agricultural consultants work with so
 1. [Overview](#overview)
 2. [Current Status](#current-status)
 3. [Strategy](#strategy)
-4. [User Stories](#user-stories)
-5. [Skeleton](#skeleton)
-6. [Features](#features)
-7. [SEO](#seo)
-8. [Wireframes](#wireframes)
-9. [Testing](#testing)
-10. [Feature Troubleshooting](#feature-troubleshooting)
-11. [Future Development](#future-development)
-12. [Accessibility](#accessibility)
-13. [Deployment](#deployment)
-14. [Credits](#credits)
-15. [Code](#code)
-16. [Storage](#storage)
-17. [Database](#database)
-18. [Languages and Technologies Used](#languages-and-technologies-used)
+4. [Final Product Specification](#final-product-specification)
+5. [User Stories](#user-stories)
+6. [Skeleton](#skeleton)
+7. [Features](#features)
+8. [SEO](#seo)
+9. [Wireframes](#wireframes)
+10. [Testing](#testing)
+11. [Feature Troubleshooting](#feature-troubleshooting)
+12. [Future Development](#future-development)
+13. [Accessibility](#accessibility)
+14. [Deployment](#deployment)
+15. [Credits](#credits)
+16. [Code](#code)
+17. [Storage](#storage)
+18. [Database](#database)
+19. [Languages and Technologies Used](#languages-and-technologies-used)
 
 ## Overview
 
@@ -58,6 +59,8 @@ Implemented in this branch:
 - Next.js public web page, admin placeholder and health route.
 - Initial brand guide, wireframes and reusable design tokens.
 - Playwright added for repeatable web/admin smoke testing.
+- Final production platform specification added at `docs/superpowers/specs/2026-07-10-ndjar-production-platform-design.md`.
+- Orange Money and TeleTaku payment assets added for the next subscription button implementation.
 
 Important limitations:
 
@@ -87,6 +90,27 @@ The commercial MVP model is subscription-first. The calendar remains a free acqu
 - Required before launch: payment provider approval, server-side entitlement checks, receipt records, refund policy, subscription expiry and consultant service-level rules.
 
 The main product risk is agronomic accuracy. The app must not present estimated or example data as validated truth. Every sensitive row keeps a source status such as `field_observed`, `estimated`, `example`, `self_reported`, `lab_validated` or `consultant_reviewed`.
+
+## Final Product Specification
+
+The approved final product direction is documented in `docs/superpowers/specs/2026-07-10-ndjar-production-platform-design.md`.
+
+The specification covers:
+
+- production architecture.
+- complete user stories.
+- farmer, consultant and admin flows.
+- authentication, roles and permissions.
+- real map with PostgreSQL and PostGIS.
+- admin map editing with GPS coordinates, polygons and published layers.
+- crop, soil, pH and calendar management.
+- forum with images, moderation and verified consultant answers.
+- Médico Agrícola chat, consultant queue, visit requests and service pricing.
+- Orange Money and TeleTaku payment flow.
+- push notifications.
+- implementation roadmap and test criteria.
+
+Next implementation should start with authentication, roles, database migrations and protected admin access. Map, forum, payments and Médico Agrícola depend on that foundation.
 
 ## User Stories
 
