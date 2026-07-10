@@ -25,4 +25,66 @@ describe("auth domain rules", () => {
       ),
     ).toBe(true);
   });
+
+  it("rejects inactive, expired and different-feature entitlements", () => {
+    const now = new Date("2026-07-10T00:00:00Z");
+
+    expect(
+      hasEntitlement(
+        [
+          {
+            active: false,
+            expiresAt: new Date("2026-08-01T00:00:00Z"),
+            featureKey: PAID_FEATURES.map,
+          },
+        ],
+        PAID_FEATURES.map,
+        now,
+      ),
+    ).toBe(false);
+
+    expect(
+      hasEntitlement(
+        [
+          {
+            active: true,
+            expiresAt: new Date("2026-07-10T00:00:00Z"),
+            featureKey: PAID_FEATURES.map,
+          },
+        ],
+        PAID_FEATURES.map,
+        now,
+      ),
+    ).toBe(false);
+
+    expect(
+      hasEntitlement(
+        [
+          {
+            active: true,
+            expiresAt: new Date("2026-08-01T00:00:00Z"),
+            featureKey: PAID_FEATURES.forum,
+          },
+        ],
+        PAID_FEATURES.map,
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it("allows an active entitlement without an expiration date", () => {
+    expect(
+      hasEntitlement(
+        [
+          {
+            active: true,
+            expiresAt: null,
+            featureKey: PAID_FEATURES.map,
+          },
+        ],
+        PAID_FEATURES.map,
+        new Date("2026-07-10T00:00:00Z"),
+      ),
+    ).toBe(true);
+  });
 });
