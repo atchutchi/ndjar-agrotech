@@ -84,7 +84,7 @@ export function PrimaryButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      onPress={onPress}
+      onPress={() => onPress()}
       style={({ pressed }) => [
         commonStyles.button,
         pressed ? { opacity: 0.82 } : null,
@@ -117,7 +117,7 @@ export function SecondaryButton({
     <Pressable
       accessibilityLabel={label}
       accessibilityRole="button"
-      onPress={onPress}
+      onPress={() => onPress()}
       style={({ pressed }) => [
         styles.secondaryButton,
         pressed ? { opacity: 0.76 } : null,
@@ -198,7 +198,7 @@ export function ListItem({
       <Pressable
         accessibilityLabel={title}
         accessibilityRole="button"
-        onPress={onPress}
+        onPress={() => onPress()}
         style={({ pressed }) => [
           styles.listItem,
           pressed ? styles.pressedItem : null,

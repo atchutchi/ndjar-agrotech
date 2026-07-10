@@ -209,7 +209,11 @@ export default function App() {
 
   return (
     <SafeAreaView style={commonStyles.screen}>
-      <StatusBar backgroundColor={colors.background} barStyle="dark-content" />
+      <StatusBar
+        backgroundColor={colors.background}
+        barStyle="dark-content"
+        translucent={false}
+      />
       <View style={{ flex: 1 }}>
         <ActiveScreen
           activateSubscription={activateSubscription}

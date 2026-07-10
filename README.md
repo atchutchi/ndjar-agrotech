@@ -29,7 +29,7 @@ The product helps farmers, field teams and agricultural consultants work with so
 
 The repository is now a TypeScript monorepo with shared packages and three application foundations:
 
-- `apps/mobile`: Expo React Native Android-first app with bottom tabs, stack-style back navigation, satellite map, realistic local image assets, offline fixture snapshot and consultation triage.
+- `apps/mobile`: Expo React Native Android-first app with bottom tabs, stack-style back navigation, interactive offline pilot map, realistic local image assets, offline fixture snapshot and consultation triage.
 - `apps/web`: Next.js public web and admin placeholder.
 - `apps/api`: NestJS fixture-backed REST API for mobile and web.
 - `packages/domain`: shared agronomic rules, pH classification, consultation escalation, offline and USSD domain logic.
@@ -49,7 +49,7 @@ Implemented in this branch:
 - PostgreSQL and PostGIS-ready schema for regions, communities, crops, samples, consultations, answer templates, notification jobs and USSD sessions.
 - NestJS API with health, regions, crops, consultations, assistant, sync and USSD preview routes.
 - Expo Android app foundation with Home, Map, Doctor, Forum and Profile tabs.
-- Mobile redesign pass with realistic generated agriculture imagery, official N'djar logo assets, Android back handling, clickable module blocks, visible consultant escalation tickets and satellite map view for the Quinara/Buba pilot.
+- Mobile redesign pass with realistic generated agriculture imagery, official N'djar logo assets, Android back handling, clickable module blocks, visible consultant escalation tickets and an interactive offline map view for the Quinara/Buba pilot.
 - Subscription-gated mobile journey: calendar stays free, while map, crop information, forum and agricultural doctor flows are guarded by a 15,000 XOF farmer plan.
 - Simulated Orange Money and TeleTaku payment actions for MVP testing. No real payment provider is connected yet.
 - Realistic crop image assets for rice, cassava, maize, beans, pumpkin, okra, yam, sweet potato and leafy vegetables, replacing placeholder icons in crop pH cards.
@@ -62,7 +62,8 @@ Implemented in this branch:
 Important limitations:
 
 - No production database is connected yet.
-- The mobile map uses Google satellite tiles through `react-native-maps`, public Buba coordinates and estimated pilot community points. It is interactive, but the community geometry is still approximate until validated GPS data is supplied.
+- The mobile presentation APK uses a pure React Native offline pilot map with public Buba coordinates and estimated community points. This avoids native map crashes in local APK demos. The community geometry is still approximate until validated GPS data is supplied.
+- A production map should use a validated GIS stack such as MapLibre, Mapbox or MapTiler in a development build, with API keys, offline tile strategy and tested Android native configuration.
 - No live USSD short code is connected.
 - No free-form AI advice is enabled.
 - Mobile offline storage is an in-memory foundation for now, not durable device storage.
@@ -151,7 +152,7 @@ Implemented foundation:
 - Home dashboard redesigned as large mobile module blocks: Calendar, Map, Subscription, Crop Information, Forum, Agricultural Doctor, About and Contact.
 - Subscription page with 15,000 XOF farmer plan and simulated Orange Money and TeleTaku activation.
 - Creative mobile agricultural calendar with a month carousel, active monthly tasks, selectable crop groups and a compact colour-coded table by phase.
-- Satellite map with interactive Buba marker, estimated community markers and an estimated pilot polygon.
+- Interactive offline pilot map with Buba coordinates, estimated community points and selectable soil guidance cards.
 - Region, calendar, sample and crop detail flows reachable from mobile cards, with Android hardware back navigation.
 - Crop detail cards with realistic generated crop images instead of generic placeholder icons.
 - Doctor triage screen using local deterministic safety rules, quick questions and local consultant ticket creation.
@@ -291,7 +292,7 @@ The highest-risk tests protect:
 
 If the map is unavailable, show the region and community list. Do not invent GPS coordinates.
 
-If Google satellite tiles load slowly in the Android emulator, keep the marker cards visible so the user can still select the region and continue to sample, calendar or consultation flows.
+If a future native map closes the app, check the Android map provider configuration, API key, package name and offline fallback before using it in a presentation build. The current APK keeps the map as a pure React Native screen to stay stable during demos.
 
 If internet is unavailable, show the local pilot snapshot and allow drafts where implemented.
 

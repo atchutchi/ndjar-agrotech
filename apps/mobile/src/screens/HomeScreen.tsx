@@ -156,7 +156,7 @@ export function HomeScreen({
           label="Informações do Cultivo"
           locked={!hasSubscription}
           meta="Fichas agrícolas"
-          onPress={() => navigate("crop", { cropId: "arroz" }, "map")}
+          onPress={() => navigate("crop", undefined, "map")}
         />
         <ModuleTile
           color={colors.action}

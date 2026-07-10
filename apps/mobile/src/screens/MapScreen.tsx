@@ -7,7 +7,6 @@ import {
   Text,
   View,
 } from "react-native";
-import MapView, { Marker, Polygon, PROVIDER_GOOGLE } from "react-native-maps";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import aboboraIcon from "../../assets/crops/abobora.png";
@@ -39,18 +38,23 @@ const bubaCenter = {
 };
 
 const communityPoints = [
-  { id: "sare-donha-1", latitude: 11.552, longitude: -15.034 },
-  { id: "sare-donha-2", latitude: 11.567, longitude: -14.951 },
-  { id: "uane", latitude: 11.627, longitude: -15.061 },
-  { id: "ugui", latitude: 11.648, longitude: -14.925 },
-];
-
-const pilotPolygon = [
-  { latitude: 11.535, longitude: -15.08 },
-  { latitude: 11.67, longitude: -15.08 },
-  { latitude: 11.695, longitude: -14.91 },
-  { latitude: 11.535, longitude: -14.9 },
-];
+  {
+    id: "sare-donha-1",
+    latitude: 11.552,
+    longitude: -15.034,
+    x: "31%",
+    y: "66%",
+  },
+  {
+    id: "sare-donha-2",
+    latitude: 11.567,
+    longitude: -14.951,
+    x: "66%",
+    y: "61%",
+  },
+  { id: "uane", latitude: 11.627, longitude: -15.061, x: "25%", y: "38%" },
+  { id: "ugui", latitude: 11.648, longitude: -14.925, x: "73%", y: "30%" },
+] as const;
 
 const cropPhRanges: Record<string, string> = {
   abobora: "6.0-6.8",
@@ -91,11 +95,16 @@ export function MapScreen({
 }) {
   const [selectedCommunityId, setSelectedCommunityId] =
     useState("sare-donha-1");
+  const [samplePhotoCount, setSamplePhotoCount] = useState(0);
   const selectedCommunity = snapshot?.communities.find(
     (community) => community.id === selectedCommunityId,
   );
   const selectedCrop = useMemo(() => {
-    const cropId = route.params?.cropId ?? "mandioca";
+    const cropId = route.params?.cropId;
+    if (!cropId) {
+      return undefined;
+    }
+
     return snapshot?.crops.find((crop) => crop.id === cropId);
   }, [route.params?.cropId, snapshot]);
 
@@ -128,10 +137,19 @@ export function MapScreen({
               meta="Enviar para laboratório ou técnico responsável."
               title="Validar pH"
             />
+            {samplePhotoCount > 0 ? (
+              <ListItem
+                icon="image-check-outline"
+                meta={`${samplePhotoCount} fotografia${
+                  samplePhotoCount > 1 ? "s" : ""
+                } guardada${samplePhotoCount > 1 ? "s" : ""} localmente para teste.`}
+                title="Fotografias adicionadas"
+              />
+            ) : null}
             <PrimaryButton
               icon="camera-plus-outline"
               label="Adicionar fotografias"
-              onPress={() => undefined}
+              onPress={() => setSamplePhotoCount((count) => count + 1)}
             />
           </View>
         </Card>
@@ -140,7 +158,40 @@ export function MapScreen({
   }
 
   if (route.name === "crop") {
-    const cropId = selectedCrop?.id ?? "mandioca";
+    if (!route.params?.cropId) {
+      return (
+        <ScrollView contentContainerStyle={commonStyles.content}>
+          <ScreenHeader
+            onBack={onBack}
+            subtitle="Escolhe uma cultura para ver pH de referência, compatibilidade regional e próxima acção."
+            title="Informações do cultivo"
+          />
+          <Card>
+            <View style={{ gap: spacing.md }}>
+              <Text style={typography.body}>
+                Culturas observadas nos dados do piloto sul da Guiné-Bissau. As
+                recomendações finais devem ser validadas com pH, solo e técnico
+                agrícola.
+              </Text>
+              {(snapshot?.crops ?? []).map((crop) => (
+                <CropRow
+                  key={crop.id}
+                  meta={`pH de referência ${
+                    cropPhRanges[crop.id] ?? "a validar"
+                  }`}
+                  source={cropImages[crop.id] ?? mandiocaIcon}
+                  title={crop.label}
+                  onPress={() => navigate("crop", { cropId: crop.id })}
+                />
+              ))}
+            </View>
+          </Card>
+        </ScrollView>
+      );
+    }
+
+    const cropId = selectedCrop?.id ?? route.params.cropId;
+    const cropImage = cropImages[cropId] ?? mandiocaIcon;
 
     return (
       <ScrollView contentContainerStyle={commonStyles.content}>
@@ -154,7 +205,7 @@ export function MapScreen({
             <View style={styles.cropHero}>
               <Image
                 resizeMode="cover"
-                source={cropImages[cropId]}
+                source={cropImage}
                 style={styles.cropImage}
               />
               <View style={{ flex: 1 }}>
@@ -209,48 +260,43 @@ export function MapScreen({
       />
 
       <View style={styles.mapShell}>
-        <MapView
-          initialCamera={{
-            center: bubaCenter,
-            heading: 18,
-            pitch: 52,
-            zoom: 10.4,
-          }}
-          mapType="satellite"
-          provider={PROVIDER_GOOGLE}
-          style={StyleSheet.absoluteFillObject}
-        >
-          <Polygon
-            coordinates={pilotPolygon}
-            fillColor="rgba(31, 107, 53, 0.18)"
-            strokeColor={colors.brandPrimary}
-            strokeWidth={2}
-          />
-          <Marker
-            coordinate={bubaCenter}
-            description="Centro de referência público para Buba"
-            title="Buba"
-          />
+        <View style={styles.mapCanvas}>
+          <View style={styles.mapSky} />
+          <View style={styles.mapGridLineOne} />
+          <View style={styles.mapGridLineTwo} />
+          <View style={styles.mapLandMass}>
+            <Text style={styles.mapLandLabel}>Quinara / Buba</Text>
+            <Text style={styles.mapLandMeta}>
+              Centro: {bubaCenter.latitude.toFixed(4)},{" "}
+              {bubaCenter.longitude.toFixed(4)}
+            </Text>
+          </View>
           {communityPoints.map((point) => {
             const community = snapshot?.communities.find(
               (item) => item.id === point.id,
             );
+            const isSelected = point.id === selectedCommunityId;
 
             return (
-              <Marker
-                coordinate={point}
+              <Pressable
+                accessibilityLabel={community?.name ?? point.id}
+                accessibilityRole="button"
                 key={point.id}
                 onPress={() => setSelectedCommunityId(point.id)}
-                pinColor={
-                  point.id === selectedCommunityId
-                    ? colors.warning
-                    : colors.brandPrimary
-                }
-                title={community?.name ?? point.id}
-              />
+                style={[
+                  styles.mapPoint,
+                  { left: point.x, top: point.y },
+                  isSelected ? styles.mapPointSelected : null,
+                ]}
+              >
+                <View style={styles.mapPointDot} />
+                <Text style={styles.mapPointLabel}>
+                  {community?.name ?? point.id}
+                </Text>
+              </Pressable>
             );
           })}
-        </MapView>
+        </View>
       </View>
 
       <View style={{ flexDirection: "row", gap: spacing.md }}>
@@ -410,6 +456,91 @@ const styles = StyleSheet.create({
     elevation: 4,
     height: 342,
     overflow: "hidden",
+  },
+  mapCanvas: {
+    backgroundColor: "#D9EBDD",
+    flex: 1,
+    overflow: "hidden",
+  },
+  mapGridLineOne: {
+    backgroundColor: "rgba(255,255,255,0.42)",
+    height: 3,
+    left: -40,
+    position: "absolute",
+    top: 136,
+    transform: [{ rotate: "-17deg" }],
+    width: 440,
+  },
+  mapGridLineTwo: {
+    backgroundColor: "rgba(31,107,53,0.18)",
+    height: 3,
+    left: -30,
+    position: "absolute",
+    top: 214,
+    transform: [{ rotate: "14deg" }],
+    width: 430,
+  },
+  mapLandLabel: {
+    color: colors.surface,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  mapLandMass: {
+    backgroundColor: colors.brandPrimary,
+    borderColor: "rgba(255,255,255,0.8)",
+    borderRadius: 28,
+    borderWidth: 2,
+    bottom: 42,
+    elevation: 8,
+    left: 38,
+    padding: spacing.lg,
+    position: "absolute",
+    right: 34,
+    top: 54,
+    transform: [{ rotate: "-7deg" }],
+  },
+  mapLandMeta: {
+    color: "#DCEFD8",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: spacing.xs,
+  },
+  mapPoint: {
+    alignItems: "center",
+    gap: spacing.xs,
+    minWidth: 92,
+    position: "absolute",
+    transform: [{ translateX: -36 }, { translateY: -18 }],
+  },
+  mapPointDot: {
+    backgroundColor: colors.surface,
+    borderColor: colors.brandDark,
+    borderRadius: 999,
+    borderWidth: 3,
+    height: 22,
+    width: 22,
+  },
+  mapPointLabel: {
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 999,
+    color: colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "800",
+    overflow: "hidden",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    textAlign: "center",
+  },
+  mapPointSelected: {
+    transform: [{ translateX: -36 }, { translateY: -18 }, { scale: 1.08 }],
+  },
+  mapSky: {
+    backgroundColor: "#BBDCF7",
+    height: 104,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
   },
   timelineFill: {
     borderRadius: 999,

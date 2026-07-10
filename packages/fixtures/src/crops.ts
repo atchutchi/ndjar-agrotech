@@ -78,7 +78,7 @@ export const pilotCrops: PilotCrop[] = [
   },
   {
     id: "abobora",
-    label: "Abobora",
+    label: "Abóbora",
     presenceByCommunityGroup: [sareDonhaCropPresence],
     presenceByCommunity: expandEstimatedCommunityPresence([
       sareDonhaCropPresence,
@@ -136,7 +136,7 @@ export const pilotCrops: PilotCrop[] = [
   },
   {
     id: "feijao",
-    label: "Feijao",
+    label: "Feijão",
     presenceByCommunityGroup: [sareDonhaCropPresence, uaneUguiCropPresence],
     presenceByCommunity: expandEstimatedCommunityPresence([
       sareDonhaCropPresence,

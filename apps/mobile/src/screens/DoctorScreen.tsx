@@ -18,7 +18,7 @@ import { colors, commonStyles, spacing, typography } from "../theme";
 import { evaluateLocalDoctorQuestion } from "./doctorSafety";
 
 const quickQuestions = [
-  "A mandioca nao cresce em Sare Donha 1",
+  "A mandioca não cresce em Sare Donha 1",
   "Quando plantar arroz de sequeiro em Buba?",
   "Posso misturar produto para combater lagarta no milho?",
 ];
@@ -52,8 +52,10 @@ export function DoctorScreen({
     void offlineStore.saveDraft("doctor-question", value);
   }
 
-  function submitQuestion(questionOverride = question) {
-    const trimmedQuestion = questionOverride.trim();
+  function submitQuestion(questionOverride?: string) {
+    const sourceQuestion =
+      typeof questionOverride === "string" ? questionOverride : question;
+    const trimmedQuestion = sourceQuestion.trim();
 
     if (trimmedQuestion.length < 8) {
       setResult(
@@ -71,7 +73,7 @@ export function DoctorScreen({
 
     if (localResult.decision.shouldEscalate) {
       setResult(
-        "Escalar para consultor em 24h. A app nao deve dar dose, mistura, produto ou prazo de colheita sem revisao.",
+        "Escalar para consultor em 24h. A app não deve dar dose, mistura, produto ou prazo de colheita sem revisão.",
       );
       setTicket(`NDJ-${Date.now().toString().slice(-5)}`);
       return;
@@ -99,7 +101,7 @@ export function DoctorScreen({
             <PrimaryButton
               icon="message-processing-outline"
               label="Verificar"
-              onPress={submitQuestion}
+              onPress={() => submitQuestion()}
             />
           </View>
           <View style={{ flex: 1 }}>
@@ -158,7 +160,7 @@ export function DoctorScreen({
             accessibilityLabel="Pergunta para o Médico Agrícola"
             multiline
             onChangeText={updateQuestion}
-            placeholder="Ex.: A mandioca nao cresce em Sare Donha 1"
+            placeholder="Ex.: A mandioca não cresce em Sare Donha 1"
             placeholderTextColor={colors.textSecondary}
             style={[
               commonStyles.input,
@@ -169,7 +171,7 @@ export function DoctorScreen({
           <PrimaryButton
             icon="shield-check-outline"
             label="Verificar pergunta"
-            onPress={submitQuestion}
+            onPress={() => submitQuestion()}
           />
         </View>
       </Card>
