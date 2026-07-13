@@ -257,7 +257,14 @@ export class AuthRepository {
         })
         .from(refreshTokens)
         .innerJoin(users, eq(refreshTokens.userId, users.id))
-        .leftJoin(authAccounts, eq(authAccounts.userId, users.id))
+        .innerJoin(
+          authAccounts,
+          and(
+            eq(authAccounts.userId, users.id),
+            eq(authAccounts.provider, "password"),
+            isNull(authAccounts.disabledAt),
+          ),
+        )
         .leftJoin(userRoles, eq(userRoles.userId, users.id))
         .leftJoin(roles, eq(roles.id, userRoles.roleId))
         .where(

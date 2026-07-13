@@ -1,4 +1,5 @@
 import { hash } from "argon2";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -7,16 +8,24 @@ import {
   parseRefreshToken,
 } from "./auth.repository.js";
 
-function selectChain<T>(result: T, onWhere?: (value: unknown) => void) {
-  return {
+function selectChain<T>(
+  result: T,
+  onWhere?: (value: unknown) => T | undefined,
+  onInnerJoin?: (table: unknown, condition: unknown) => void,
+) {
+  const chain = {
     from: vi.fn().mockReturnThis(),
-    innerJoin: vi.fn().mockReturnThis(),
+    innerJoin: vi.fn((table: unknown, condition: unknown) => {
+      onInnerJoin?.(table, condition);
+      return chain;
+    }),
     leftJoin: vi.fn().mockReturnThis(),
     where: vi.fn((value: unknown) => {
-      onWhere?.(value);
-      return Promise.resolve(result);
+      return Promise.resolve(onWhere?.(value) ?? result);
     }),
   };
+
+  return chain;
 }
 
 function mutationChain<T>(result: T, onWhere?: (value: unknown) => void) {
@@ -128,6 +137,46 @@ describe("AuthRepository refresh tokens", () => {
     expect(result).toBeNull();
     expect(update.where).toHaveBeenCalled();
     expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("nao renova a sessao de uma conta password desactivada", async () => {
+    const disabledAccountRow = [
+      {
+        defaultRole: "farmer",
+        displayName: "Binta Cisse",
+        id: "user-1",
+        passwordHash: "password-hash",
+        refreshTokenHash: await hash(validRefreshTokenSecret),
+        refreshTokenId: validRefreshTokenSelector,
+        roleId: "farmer",
+      },
+    ];
+    let excludesDisabledPasswordAccount = false;
+    const select = selectChain(
+      disabledAccountRow,
+      () => (excludesDisabledPasswordAccount ? [] : disabledAccountRow),
+      (_table, condition) => {
+        const query = new PgDialect().sqlToQuery(condition as never).sql;
+
+        excludesDisabledPasswordAccount ||=
+          query.includes('"auth_accounts"."disabled_at" is null') &&
+          query.includes('"auth_accounts"."provider" = $');
+      },
+    );
+    const update = mutationChain([{ id: validRefreshTokenSelector }]);
+    const insert = mutationChain([]);
+    const tx = {
+      insert: vi.fn(() => insert),
+      select: vi.fn(() => select),
+      update: vi.fn(() => update),
+    };
+
+    const result =
+      await repositoryWithTransaction(tx).rotateRefreshToken(validRefreshToken);
+
+    expect(result).toBeNull();
+    expect(update.where).not.toHaveBeenCalled();
+    expect(insert.values).not.toHaveBeenCalled();
   });
 });
 

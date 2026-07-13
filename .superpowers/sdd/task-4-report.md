@@ -140,6 +140,93 @@ Avisos observados:
 LF will be replaced by CRLF the next time Git touches it
 ```
 
+## Independent review fixes
+
+### RED
+
+Foram criados primeiro testes para `AuthGuard` e para a rotação de refresh token de uma conta `password` desactivada. O teste do guard assina um JWT real com `signAccessToken` e só fornece o cabeçalho `Authorization`, sem injectar `request.user`. Cobre token válido, ausência de token e token inválido.
+
+Comando:
+
+```bash
+corepack pnpm --filter @ndjar/api test -- auth.guard.test.ts auth.repository.test.ts auth.controller.test.ts
+```
+
+Resultado antes da implementação:
+
+```text
+Test Files  2 failed | 4 passed (6)
+Tests       1 failed | 39 passed (40)
+```
+
+Falhas relevantes:
+
+```text
+Cannot find module './auth.guard.js'
+expected { ... } to be null
+```
+
+O segundo erro demonstrou que `rotateRefreshToken` devolvia uma sessão para a conta desactivada simulada.
+
+### GREEN
+
+Foi criado `AuthGuard`, aplicado exclusivamente a `GET /auth/me` e registado e exportado pelo `AuthModule`. O guard valida o Bearer JWT, preenche `request.user` com `{ id, roles }` e rejeita token ausente ou inválido com `Sessão obrigatória`.
+
+`rotateRefreshToken` passou a exigir uma conta `password` activa através de `innerJoin(authAccounts, ...)`, com `provider = password` e `disabledAt IS NULL`. Não foi implementado `RolesGuard`.
+
+Comando:
+
+```bash
+corepack pnpm --filter @ndjar/api test -- auth.guard.test.ts auth.repository.test.ts auth.controller.test.ts
+```
+
+Resultado:
+
+```text
+Test Files  6 passed (6)
+Tests       43 passed (43)
+```
+
+Nota: a configuração actual do Vitest também executa os restantes testes da API quando recebe estes filtros.
+
+Comando:
+
+```bash
+corepack pnpm --filter @ndjar/api typecheck
+```
+
+Resultado:
+
+```text
+tsc -p tsconfig.json --noEmit
+```
+
+Exit code: 0.
+
+Comando:
+
+```bash
+corepack pnpm --filter @ndjar/api lint
+```
+
+Resultado:
+
+```text
+All matched files use Prettier code style!
+```
+
+Comando:
+
+```bash
+git diff --check
+```
+
+Resultado:
+
+```text
+Exit code: 0
+```
+
 Comando adicional:
 
 ```bash

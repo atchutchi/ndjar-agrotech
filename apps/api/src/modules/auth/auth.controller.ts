@@ -6,6 +6,7 @@ import {
   Inject,
   Post,
   Req,
+  UseGuards,
 } from "@nestjs/common";
 import { ZodError, type ZodType } from "zod";
 
@@ -18,6 +19,7 @@ import {
   resetPasswordSchema,
   verifySchema,
 } from "./auth.schemas.js";
+import { AuthGuard } from "./auth.guard.js";
 import { AuthService } from "./auth.service.js";
 
 import type { AuthenticatedUser } from "./auth.service.js";
@@ -75,6 +77,7 @@ export class AuthController {
   }
 
   @Get("me")
+  @UseGuards(AuthGuard)
   me(@Req() request: AuthenticatedRequest) {
     return this.authService.me(request.user);
   }
