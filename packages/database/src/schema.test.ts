@@ -115,6 +115,39 @@ describe("production auth schema", () => {
         ),
       ),
     ).toBe(true);
+    expect(
+      config.foreignKeys.some((foreignKey) => {
+        const reference = foreignKey.reference();
+        return (
+          reference.columns.map((column) => column.name).join(",") ===
+            "parent_token_id" &&
+          reference.foreignColumns.map((column) => column.name).join(",") ===
+            "id"
+        );
+      }),
+    ).toBe(true);
+  });
+
+  it("indexa pesquisas operacionais de autenticacao", () => {
+    const indexedNames = [
+      authAccounts,
+      userProfiles,
+      verificationCodes,
+    ].flatMap((table) =>
+      getTableConfig(table).indexes.map((index) =>
+        index.config.columns
+          .map((column) => ("name" in column ? column.name : undefined))
+          .join(","),
+      ),
+    );
+
+    expect(indexedNames).toEqual(
+      expect.arrayContaining([
+        "user_id",
+        "phone_number_hash",
+        "target_hash,purpose,consumed_at,expires_at",
+      ]),
+    );
   });
 
   it("impede entitlements de apontarem para subscricoes de outro utilizador", () => {
@@ -137,9 +170,8 @@ describe("production auth schema", () => {
         return (
           reference.columns.map((column) => column.name).join(",") ===
             "subscription_id,user_id" &&
-          reference.foreignColumns
-            .map((column) => column.name)
-            .join(",") === "id,user_id"
+          reference.foreignColumns.map((column) => column.name).join(",") ===
+            "id,user_id"
         );
       }),
     ).toBe(true);

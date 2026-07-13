@@ -39,6 +39,12 @@ describe("agronomic integrity", () => {
     expect(checkSql(soilSamples).join(" ")).toContain('"ph" >= 0');
     expect(checkSql(soilSamples).join(" ")).toContain('"ph" <= 14');
     expect(checkSql(soilSamples).join(" ")).toContain('"ph_class"');
+    expect(checkSql(soilSamples).join(" ")).toContain(
+      '"soil_samples"."ph_class" = \'strongly-acidic\'',
+    );
+    expect(checkSql(soilSamples).join(" ")).toContain(
+      '"soil_samples"."ph_class" = \'alkaline\'',
+    );
   });
 
   it("stores minimum traceable provenance and links agronomic records", () => {

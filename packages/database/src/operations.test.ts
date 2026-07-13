@@ -45,4 +45,18 @@ describe("database operations", () => {
       migration.indexOf("CREATE EXTENSION IF NOT EXISTS postgis"),
     ).toBeLessThan(migration.indexOf("CREATE TABLE"));
   });
+
+  it("preflights incompatible pH rows before adding strict coherence", () => {
+    const migration = readFileSync(
+      resolve(
+        import.meta.dirname,
+        "../drizzle/0001_auth_agronomic_integrity.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("RAISE EXCEPTION");
+    expect(migration).toContain("soil_samples");
+    expect(migration).toContain("corrija os dados antes de migrar");
+  });
 });

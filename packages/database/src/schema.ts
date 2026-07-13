@@ -336,9 +336,7 @@ export const cropPresence = pgTable(
       .references(() => communities.id),
     sourceStatus: sourceStatusEnum("source_status").notNull(),
     sourceId: agronomicSourceColumn(),
-    sourceGroupId: text("source_group_id").references(
-      () => communityGroups.id,
-    ),
+    sourceGroupId: text("source_group_id").references(() => communityGroups.id),
     observedAt: timestamp("observed_at", { withTimezone: true }),
     ...offlineSyncColumns(),
     ...timestampColumns(),
@@ -408,6 +406,16 @@ export const soilSamples = pgTable(
       sql`(${table.ph} is null and ${table.phClass} is null) or (${table.ph} is not null and ${table.phClass} is not null)`,
     ),
     check(
+      "soil_samples_ph_class_matches_value",
+      sql`${table.ph} is null or (
+        (${table.ph} >= 0 and ${table.ph} < 4.5 and ${table.phClass} = 'strongly-acidic') or
+        (${table.ph} >= 4.5 and ${table.ph} < 5.5 and ${table.phClass} = 'acidic') or
+        (${table.ph} >= 5.5 and ${table.ph} < 6.5 and ${table.phClass} = 'slightly-acidic') or
+        (${table.ph} >= 6.5 and ${table.ph} <= 7.5 and ${table.phClass} = 'neutral') or
+        (${table.ph} > 7.5 and ${table.ph} <= 14 and ${table.phClass} = 'alkaline')
+      )`,
+    ),
+    check(
       "soil_samples_depth_non_negative",
       sql`${table.depthCm} is null or ${table.depthCm} >= 0`,
     ),
@@ -439,7 +447,10 @@ export const answerTemplates = pgTable(
     regionId: text("region_id").references(() => regions.id),
     language: text("language").default("pt").notNull(),
     questionKey: text("question_key").notNull(),
-    triggerTerms: jsonb("trigger_terms").$type<string[]>().default([]).notNull(),
+    triggerTerms: jsonb("trigger_terms")
+      .$type<string[]>()
+      .default([])
+      .notNull(),
     answerText: text("answer_text").notNull(),
     deterministicPriority: integer("deterministic_priority")
       .default(100)
@@ -563,21 +574,27 @@ export const notificationJobs = pgTable("notification_jobs", {
   ...timestampColumns(),
 });
 
-export const userProfiles = pgTable("user_profiles", {
-  userId: uuid("user_id")
-    .primaryKey()
-    .references(() => users.id),
-  fullName: text("full_name"),
-  email: text("email"),
-  phoneNumberHash: text("phone_number_hash"),
-  phoneCountryCode: text("phone_country_code").default("245").notNull(),
-  regionId: text("region_id").references(() => regions.id),
-  communityId: text("community_id").references(() => communities.id),
-  preferredLanguage: text("preferred_language").default("pt").notNull(),
-  avatarStorageKey: text("avatar_storage_key"),
-  verifiedAt: timestamp("verified_at", { withTimezone: true }),
-  ...timestampColumns(),
-});
+export const userProfiles = pgTable(
+  "user_profiles",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id),
+    fullName: text("full_name"),
+    email: text("email"),
+    phoneNumberHash: text("phone_number_hash"),
+    phoneCountryCode: text("phone_country_code").default("245").notNull(),
+    regionId: text("region_id").references(() => regions.id),
+    communityId: text("community_id").references(() => communities.id),
+    preferredLanguage: text("preferred_language").default("pt").notNull(),
+    avatarStorageKey: text("avatar_storage_key"),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    ...timestampColumns(),
+  },
+  (table) => [
+    index("user_profiles_phone_number_hash_idx").on(table.phoneNumberHash),
+  ],
+);
 
 export const authAccounts = pgTable(
   "auth_accounts",
@@ -598,39 +615,64 @@ export const authAccounts = pgTable(
       table.provider,
       table.loginIdentifierHash,
     ),
+    index("auth_accounts_user_id_idx").on(table.userId),
   ],
 );
 
-export const verificationCodes = pgTable("verification_codes", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").references(() => users.id),
-  purpose: verificationPurposeEnum("purpose").notNull(),
-  targetHash: text("target_hash").notNull(),
-  codeHash: text("code_hash").notNull(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  consumedAt: timestamp("consumed_at", { withTimezone: true }),
-  attempts: integer("attempts").default(0).notNull(),
-  ...timestampColumns(),
-});
+export const verificationCodes = pgTable(
+  "verification_codes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").references(() => users.id),
+    purpose: verificationPurposeEnum("purpose").notNull(),
+    targetHash: text("target_hash").notNull(),
+    codeHash: text("code_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    attempts: integer("attempts").default(0).notNull(),
+    ...timestampColumns(),
+  },
+  (table) => [
+    index("verification_codes_target_lookup_idx").on(
+      table.targetHash,
+      table.purpose,
+      table.consumedAt,
+      table.expiresAt,
+    ),
+    index("verification_codes_user_purpose_idx").on(
+      table.userId,
+      table.purpose,
+    ),
+  ],
+);
 
-export const refreshTokens = pgTable("refresh_tokens", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id),
-  tokenHash: text("token_hash").notNull(),
-  familyId: uuid("family_id").notNull(),
-  parentTokenId: uuid("parent_token_id"),
-  userAgent: text("user_agent"),
-  ipHash: text("ip_hash"),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  consumedAt: timestamp("consumed_at", { withTimezone: true }),
-  revokedAt: timestamp("revoked_at", { withTimezone: true }),
-  ...timestampColumns(),
-}, (table) => [
-  index("refresh_tokens_family_id_idx").on(table.familyId),
-  index("refresh_tokens_user_id_idx").on(table.userId),
-]);
+export const refreshTokens = pgTable(
+  "refresh_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    tokenHash: text("token_hash").notNull(),
+    familyId: uuid("family_id").notNull(),
+    parentTokenId: uuid("parent_token_id"),
+    userAgent: text("user_agent"),
+    ipHash: text("ip_hash"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    ...timestampColumns(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.parentTokenId],
+      foreignColumns: [table.id],
+      name: "refresh_tokens_parent_token_fk",
+    }),
+    index("refresh_tokens_family_id_idx").on(table.familyId),
+    index("refresh_tokens_user_id_idx").on(table.userId),
+  ],
+);
 
 export const roles = pgTable("roles", {
   id: text("id").primaryKey(),
