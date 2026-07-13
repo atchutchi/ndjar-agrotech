@@ -199,7 +199,7 @@ Implemented foundation:
 
 Planned MVP features not complete yet:
 
-- Login and registration by phone.
+- Mobile login and registration screens. The API already exposes registration and login endpoints for phone identifiers, while SMS/email code delivery and operational integration remain pending.
 - Real subscription account model with start date, expiry date, renewal, failed payment handling and server-side access control.
 - Production Orange Money and TeleTaku integration.
 - Durable offline storage with Expo SQLite or equivalent.
@@ -269,13 +269,12 @@ The local environment contract is:
 DATABASE_URL=
 NDJAR_DATABASE_MODE=fixture
 JWT_ACCESS_SECRET=
-JWT_REFRESH_SECRET=
 NDJAR_API_URL=http://localhost:3333
 ```
 
 `NDJAR_DATABASE_MODE=fixture` lets the API start without a database for fixture-backed routes. Real login and real entitlements require PostgreSQL, a non-empty `DATABASE_URL` and the schema applied.
 
-Keep the JWT fields empty in `.env`. Generate runtime-only secrets in the current PowerShell process. This command uses `RandomNumberGenerator`, does not print a secret and does not write one to disk:
+Keep `JWT_ACCESS_SECRET` empty in `.env`. Generate it only for the current PowerShell process. This command uses `RandomNumberGenerator`, does not print a secret and does not write one to disk:
 
 ```powershell
 function New-NdjarRuntimeSecret {
@@ -284,9 +283,10 @@ function New-NdjarRuntimeSecret {
   [Convert]::ToBase64String($bytes).TrimEnd("=").Replace("+", "-").Replace("/", "_")
 }
 $env:JWT_ACCESS_SECRET = New-NdjarRuntimeSecret
-$env:JWT_REFRESH_SECRET = New-NdjarRuntimeSecret
 Remove-Item function:New-NdjarRuntimeSecret
 ```
+
+Refresh tokens are opaque values generated randomly by the API. The database persists only their hash, so there is no `JWT_REFRESH_SECRET` environment variable.
 
 Run the API and web applications in separate terminals after setting their required runtime environment:
 

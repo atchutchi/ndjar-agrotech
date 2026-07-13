@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const ADMIN_ACCESS_COOKIE = "ndjar_admin_access";
 const ADMIN_LOGIN_HEADER = "x-ndjar-admin-login";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const isAdmin = request.nextUrl.pathname.startsWith("/admin");
   const isLogin = request.nextUrl.pathname === "/admin/login";
 

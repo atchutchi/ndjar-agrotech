@@ -6,7 +6,7 @@ Actualizei o README e `.env.example` para documentar a fundação de produção 
 
 O README passa a registar schema, endpoints de autenticação, `AuthGuard`, `RolesGuard`, shell de administração protegido e endpoint de entitlements. Também explica que não existem ainda provisionamento PostgreSQL, migrations aplicadas, email ou SMS, pagamentos reais, GIS e CRUD administrativo, backend completo do fórum ou consultas completas de produção.
 
-`.env.example` contém `NDJAR_API_URL=http://localhost:3333`. `DATABASE_URL`, `JWT_ACCESS_SECRET` e `JWT_REFRESH_SECRET` permanecem vazios. O README documenta `NDJAR_DATABASE_MODE=fixture` para iniciar rotas baseadas em fixtures sem base de dados e esclarece que login real e entitlements reais requerem PostgreSQL. Inclui ainda um comando PowerShell que gera os JWT apenas no processo actual com `RandomNumberGenerator`, sem imprimir nem gravar segredos.
+`.env.example` contém `NDJAR_API_URL=http://localhost:3333`. `DATABASE_URL` e `JWT_ACCESS_SECRET` permanecem vazios. O README documenta `NDJAR_DATABASE_MODE=fixture` para iniciar rotas baseadas em fixtures sem base de dados e esclarece que login real e entitlements reais requerem PostgreSQL. Inclui ainda um comando PowerShell que gera o JWT de acesso apenas no processo actual com `RandomNumberGenerator`, sem imprimir nem gravar segredos.
 
 O README mantém a cobertura de segurança activa e regista dois limites externos sem alterar o workflow: a protecção de branch ainda tem de exigir o trusted secret scan e `pre-commit/action` mantém dependências transitivas mutáveis geridas pelo fornecedor.
 
@@ -23,7 +23,7 @@ O README mantém a cobertura de segurança activa e regista dois limites externo
 - `corepack pnpm --filter @ndjar/database test`: passou, 8 testes.
 - `corepack pnpm --filter @ndjar/domain test`: passou, 29 testes.
 - `corepack pnpm --filter @ndjar/api test`: passou, 56 testes.
-- `corepack pnpm --filter @ndjar/web test`: passou, 20 testes.
+- `corepack pnpm --filter @ndjar/web test`: passou, 21 testes.
 - `corepack pnpm --filter @ndjar/database typecheck`: passou.
 - `corepack pnpm --filter @ndjar/domain typecheck`: passou.
 - `corepack pnpm --filter @ndjar/api typecheck`: passou.
@@ -31,7 +31,7 @@ O README mantém a cobertura de segurança activa e regista dois limites externo
 - `corepack pnpm --filter @ndjar/api lint`: passou depois de formatar os dois testes alterados.
 - `corepack pnpm --filter @ndjar/web lint`: passou.
 - `corepack pnpm --filter @ndjar/api build`: passou.
-- `corepack pnpm --filter @ndjar/web build`: passou. O Next.js 16 emite o aviso não bloqueante de que a convenção `middleware` será substituída por `proxy`.
+- `corepack pnpm --filter @ndjar/web build`: passou sem o aviso `middleware-to-proxy`.
 - `git diff --check`: passou.
 - `py -m pre_commit run detect-secrets --all-files`: passou.
 - Leitura UTF-8 com Node e detecção de mojibake: passou para `README.md` e os relatórios alterados.
@@ -40,6 +40,23 @@ O README mantém a cobertura de segurança activa e regista dois limites externo
 
 Não alterei a especificação porque a implementação não revelou uma contradição de arquitectura. Não foram introduzidos segredos fixos, migrations, provisionamento de base de dados, alterações de pagamentos, GIS, CRUD, fórum ou workflow de CI. O diff está limitado à documentação, correcções de relatórios e cobertura de teste necessária para os Minors identificados.
 
+## Independent review fixes
+
+- Removido `JWT_REFRESH_SECRET` de `.env.example`, do contrato de ambiente e do comando PowerShell. O README explica agora que os refresh tokens são opacos, gerados aleatoriamente pela API e persistidos apenas por hash na base de dados.
+- Corrigida a lista de trabalho pendente: os endpoints API de registo e login por telefone já existem. Continuam pendentes os ecrãs mobile, a entrega de códigos por SMS/email e a integração operacional.
+- Migrada a convenção Next.js 16 de `middleware.ts` para `proxy.ts`, preservando o matcher, o redireccionamento sem cookie e a sanitização do cabeçalho interno. `proxy.test.ts` cobre a página de login sem cookie, o redireccionamento de `/admin` sem cookie e a remoção de um cabeçalho interno forjado.
+
+### Verificação das correcções
+
+- `corepack pnpm --filter @ndjar/web test`: passou, 21 testes.
+- `corepack pnpm --filter @ndjar/web typecheck`: passou.
+- `corepack pnpm --filter @ndjar/web lint`: passou.
+- `corepack pnpm --filter @ndjar/web build`: passou sem o aviso `middleware-to-proxy`.
+- `corepack pnpm --filter @ndjar/api test`: passou, 56 testes.
+- `git diff --check`: passou.
+- `py -m pre_commit run detect-secrets --all-files`: passou.
+- Leitura UTF-8 com Node e detecção de mojibake: passou para `README.md`, `.env.example` e este relatório.
+
 ## Preocupações
 
-Não há bloqueios externos para esta tarefa. A integração operacional continua dependente de PostgreSQL provisionado com schema aplicado. Branch protection e a gestão do risco de dependências transitivas de `pre-commit/action` são configurações externas ainda pendentes. O aviso de deprecação de `middleware` no build da web não foi corrigido porque não pertence ao âmbito desta fundação.
+Não há bloqueios externos para esta tarefa. A integração operacional continua dependente de PostgreSQL provisionado com schema aplicado. Branch protection e a gestão do risco de dependências transitivas de `pre-commit/action` são configurações externas ainda pendentes.
