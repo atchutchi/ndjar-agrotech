@@ -228,7 +228,39 @@ describe("database operations", () => {
     expect(exclusion).toBeGreaterThan(preflight);
   });
 
-  it("migrates seed inventories and immutable tombstones without deletion", () => {
+  it("prevents valid subscription overlap for a user across all plans", () => {
+    const migration = readFileSync(
+      resolve(
+        import.meta.dirname,
+        "../drizzle/0012_subscription_user_overlap.sql",
+      ),
+      "utf8",
+    );
+    const preflight = migration.indexOf(
+      'current_subscription."user_id" = candidate."user_id"',
+    );
+    const dropPlanConstraint = migration.indexOf(
+      'DROP CONSTRAINT "subscriptions_no_active_plan_overlap"',
+    );
+    const userConstraint = migration.indexOf(
+      'ADD CONSTRAINT "subscriptions_no_active_user_overlap" EXCLUDE USING gist',
+    );
+    const constraintSql = migration.slice(userConstraint);
+
+    expect(preflight).toBeGreaterThanOrEqual(0);
+    expect(preflight).toBeLessThan(dropPlanConstraint);
+    expect(dropPlanConstraint).toBeLessThan(userConstraint);
+    expect(constraintSql).toContain('"user_id" WITH =');
+    expect(constraintSql).toContain(
+      'tstzrange("starts_at", "expires_at", \'[)\') WITH &&',
+    );
+    expect(constraintSql).not.toContain('"plan_id" WITH =');
+    expect(constraintSql).toContain(
+      "WHERE (\"status\" IN ('active', 'trial'))",
+    );
+  });
+
+  it("migrates seed inventories with controlled operational retirement", () => {
     const migration = readFileSync(
       resolve(import.meta.dirname, "../drizzle/0009_seed_tombstones.sql"),
       "utf8",
@@ -260,7 +292,10 @@ describe("database operations", () => {
       'CREATE UNIQUE INDEX "seed_tombstones_entity_version_unique" ON "seed_tombstones" USING btree ("seed_key","entity_type","entity_id","removed_in_version")',
     );
     expect(runner).toContain("reconcileSeedTombstones");
-    expect(runner).not.toContain(".delete(");
+    expect(runner).toContain("retireSeedEntities");
+    expect(runner).not.toMatch(
+      /\.delete\((users|userProfiles|consultations|consultationResponses)\)/,
+    );
     const tombstoneInsert = runner.slice(
       runner.indexOf(".insert(seedTombstones)"),
       runner.indexOf(".insert(seedManifests)"),

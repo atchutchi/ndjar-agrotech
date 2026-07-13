@@ -44,6 +44,38 @@ interface SeedTombstoneDeclaration {
   entityType: string;
 }
 
+interface SeedTombstoneRecord extends SeedTombstoneDeclaration {
+  removedInVersion: number;
+  seedKey: string;
+}
+
+interface SeedRetirementOperations {
+  deleteEntities(
+    entityType: SeedOperationalEntityType,
+    entityIds: readonly string[],
+  ): Promise<readonly string[]>;
+  recordTombstones(records: readonly SeedTombstoneRecord[]): Promise<void>;
+}
+
+const SEED_RETIREMENT_ORDER = [
+  "calendarTasks",
+  "soilSamples",
+  "cropAgronomicNotes",
+  "cropProductionEvidence",
+  "cropPresence",
+  "cropPresenceGroupObservations",
+  "communityGroupMembers",
+  "communities",
+  "communityGroups",
+  "crops",
+  "regions",
+] as const;
+
+type SeedOperationalEntityType = (typeof SEED_RETIREMENT_ORDER)[number];
+type DatabaseTransaction = Parameters<
+  Parameters<Database["transaction"]>[0]
+>[0];
+
 type AgronomicSourceRecord = (typeof pilotSeedData.agronomicSources)[number];
 
 export function planSeedApplication(
@@ -152,6 +184,138 @@ export function reconcileSeedTombstones(
   return [...declared].sort((left, right) =>
     tombstoneKey(left).localeCompare(tombstoneKey(right)),
   );
+}
+
+function isSeedOperationalEntityType(
+  entityType: string,
+): entityType is SeedOperationalEntityType {
+  return (SEED_RETIREMENT_ORDER as readonly string[]).includes(entityType);
+}
+
+export async function retireSeedEntities(
+  tombstones: readonly SeedTombstoneDeclaration[],
+  manifest: Pick<SeedManifest, "key" | "version">,
+  operations: SeedRetirementOperations,
+): Promise<void> {
+  for (const tombstone of tombstones) {
+    if (!isSeedOperationalEntityType(tombstone.entityType)) {
+      throw new Error(
+        `O tipo ${tombstone.entityType} nao pode ser retirado pelo seed operacional.`,
+      );
+    }
+  }
+
+  for (const entityType of SEED_RETIREMENT_ORDER) {
+    const entityIds = tombstones
+      .filter((tombstone) => tombstone.entityType === entityType)
+      .map((tombstone) => tombstone.entityId);
+    if (entityIds.length === 0) {
+      continue;
+    }
+
+    const deletedIds = await operations.deleteEntities(entityType, entityIds);
+    const deletedSet = new Set(deletedIds);
+    const missingId = entityIds.find((entityId) => !deletedSet.has(entityId));
+    if (missingId || deletedSet.size !== entityIds.length) {
+      throw new Error(
+        `A retirada de ${entityType} nao removeu exactamente os IDs declarados no manifesto.`,
+      );
+    }
+  }
+
+  await operations.recordTombstones(
+    tombstones.map((tombstone) => ({
+      ...tombstone,
+      removedInVersion: manifest.version,
+      seedKey: manifest.key,
+    })),
+  );
+}
+
+async function deleteOperationalSeedEntities(
+  tx: DatabaseTransaction,
+  entityType: SeedOperationalEntityType,
+  entityIds: readonly string[],
+): Promise<string[]> {
+  switch (entityType) {
+    case "calendarTasks":
+      return (
+        await tx
+          .delete(calendarTasks)
+          .where(inArray(calendarTasks.id, entityIds))
+          .returning({ id: calendarTasks.id })
+      ).map((record) => record.id);
+    case "soilSamples":
+      return (
+        await tx
+          .delete(soilSamples)
+          .where(inArray(soilSamples.id, entityIds))
+          .returning({ id: soilSamples.id })
+      ).map((record) => record.id);
+    case "cropAgronomicNotes":
+      return (
+        await tx
+          .delete(cropAgronomicNotes)
+          .where(inArray(cropAgronomicNotes.id, entityIds))
+          .returning({ id: cropAgronomicNotes.id })
+      ).map((record) => record.id);
+    case "cropProductionEvidence":
+      return (
+        await tx
+          .delete(cropProductionEvidence)
+          .where(inArray(cropProductionEvidence.id, entityIds))
+          .returning({ id: cropProductionEvidence.id })
+      ).map((record) => record.id);
+    case "cropPresence":
+      return (
+        await tx
+          .delete(cropPresence)
+          .where(inArray(cropPresence.id, entityIds))
+          .returning({ id: cropPresence.id })
+      ).map((record) => record.id);
+    case "cropPresenceGroupObservations":
+      return (
+        await tx
+          .delete(cropPresenceGroupObservations)
+          .where(inArray(cropPresenceGroupObservations.id, entityIds))
+          .returning({ id: cropPresenceGroupObservations.id })
+      ).map((record) => record.id);
+    case "communityGroupMembers":
+      return (
+        await tx
+          .delete(communityGroupMembers)
+          .where(inArray(communityGroupMembers.id, entityIds))
+          .returning({ id: communityGroupMembers.id })
+      ).map((record) => record.id);
+    case "communities":
+      return (
+        await tx
+          .delete(communities)
+          .where(inArray(communities.id, entityIds))
+          .returning({ id: communities.id })
+      ).map((record) => record.id);
+    case "communityGroups":
+      return (
+        await tx
+          .delete(communityGroups)
+          .where(inArray(communityGroups.id, entityIds))
+          .returning({ id: communityGroups.id })
+      ).map((record) => record.id);
+    case "crops":
+      return (
+        await tx
+          .delete(crops)
+          .where(inArray(crops.id, entityIds))
+          .returning({ id: crops.id })
+      ).map((record) => record.id);
+    case "regions":
+      return (
+        await tx
+          .delete(regions)
+          .where(inArray(regions.id, entityIds))
+          .returning({ id: regions.id })
+      ).map((record) => record.id);
+  }
 }
 
 export function verifyAgronomicSources(
@@ -305,13 +469,13 @@ export async function seedPilotDatabase(
     }
 
     if (tombstones.length > 0) {
-      await tx.insert(seedTombstones).values(
-        tombstones.map((tombstone) => ({
-          ...tombstone,
-          removedInVersion: manifest.version,
-          seedKey: manifest.key,
-        })),
-      );
+      await retireSeedEntities(tombstones, manifest, {
+        deleteEntities: (entityType, entityIds) =>
+          deleteOperationalSeedEntities(tx, entityType, entityIds),
+        recordTombstones: async (records) => {
+          await tx.insert(seedTombstones).values([...records]);
+        },
+      });
     }
 
     await tx

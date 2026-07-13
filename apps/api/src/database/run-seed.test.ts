@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   planSeedApplication,
   reconcileSeedTombstones,
+  retireSeedEntities,
   seedPilotDatabase,
   verifyAgronomicSources,
 } from "./run-seed.js";
@@ -105,6 +106,72 @@ describe("reconcileSeedTombstones", () => {
         { entityId: "mandioca", entityType: "crops" },
       ]),
     ).toThrow("nao corresponde");
+  });
+});
+
+describe("retireSeedEntities", () => {
+  it("removes baseline data in dependency order and keeps an audit tombstone", async () => {
+    const operational = new Map([
+      ["cropPresence", new Set(["mandioca:sare-donha-1"])],
+      ["crops", new Set(["arroz", "mandioca"])],
+    ]);
+    const audit: Array<{
+      entityId: string;
+      entityType: string;
+      removedInVersion: number;
+      seedKey: string;
+    }> = [];
+    const deletionOrder: string[] = [];
+
+    await retireSeedEntities(
+      [
+        {
+          entityId: "mandioca:sare-donha-1",
+          entityType: "cropPresence",
+        },
+        { entityId: "mandioca", entityType: "crops" },
+      ],
+      { key: "pilot-south", version: 2 },
+      {
+        deleteEntities: async (entityType, entityIds) => {
+          deletionOrder.push(entityType);
+          const records = operational.get(entityType);
+          return entityIds.filter((entityId) => records?.delete(entityId));
+        },
+        recordTombstones: async (records) => {
+          audit.push(...records);
+        },
+      },
+    );
+
+    expect(deletionOrder).toEqual(["cropPresence", "crops"]);
+    expect(operational.get("crops")).not.toContain("mandioca");
+    expect(audit).toContainEqual({
+      entityId: "mandioca",
+      entityType: "crops",
+      removedInVersion: 2,
+      seedKey: "pilot-south",
+    });
+  });
+
+  it("rejects non-operational and user-owned entity types", async () => {
+    const deleteEntities = vi.fn();
+
+    await expect(
+      retireSeedEntities(
+        [{ entityId: "source-v1", entityType: "agronomicSources" }],
+        { key: "pilot-south", version: 2 },
+        { deleteEntities, recordTombstones: vi.fn() },
+      ),
+    ).rejects.toThrow("nao pode ser retirado");
+    await expect(
+      retireSeedEntities(
+        [{ entityId: "user-1", entityType: "users" }],
+        { key: "pilot-south", version: 2 },
+        { deleteEntities, recordTombstones: vi.fn() },
+      ),
+    ).rejects.toThrow("nao pode ser retirado");
+    expect(deleteEntities).not.toHaveBeenCalled();
   });
 });
 
