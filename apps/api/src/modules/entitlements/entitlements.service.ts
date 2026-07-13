@@ -22,8 +22,10 @@ export class EntitlementsService {
   ) {}
 
   async getCurrentUserEntitlements(userId: string, now = new Date()) {
-    const { entitlements, subscription } =
-      await this.repository.findForUser(userId);
+    const { entitlements, subscription } = await this.repository.findForUser(
+      userId,
+      now,
+    );
     const validEntitlements: EntitlementSnapshot[] = entitlements.flatMap(
       (entitlement) => {
         if (!isPaidFeature(entitlement.featureKey)) {

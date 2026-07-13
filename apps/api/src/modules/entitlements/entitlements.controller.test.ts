@@ -131,7 +131,7 @@ describe("EntitlementsService", () => {
         status: "active",
       },
     });
-    expect(repository.findForUser).toHaveBeenCalledWith("user-1");
+    expect(repository.findForUser).toHaveBeenCalledWith("user-1", now);
   });
 
   it("ignora entitlements inactivos expirados e com feature desconhecida", async () => {
@@ -232,15 +232,13 @@ describe("EntitlementsService", () => {
 });
 
 describe("EntitlementsRepository", () => {
-  it("consulta o utilizador pedido e ordena a subscricao mais recente", async () => {
+  it("devolve acessos apenas da mesma subscricao valida seleccionada", async () => {
+    const subscriptionId = "11111111-1111-4111-8111-111111111111";
     const entitlementWhere = vi.fn().mockResolvedValue([
       {
         active: true,
         expiresAt: null,
         featureKey: "forum",
-        subscriptionExpiresAt: new Date("2026-09-01T00:00:00.000Z"),
-        subscriptionStartsAt: new Date("2026-07-01T00:00:00.000Z"),
-        subscriptionStatus: "active",
       },
     ]);
     const subscriptionWhere = vi.fn();
@@ -250,28 +248,28 @@ describe("EntitlementsRepository", () => {
       .fn()
       .mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            where: entitlementWhere,
-          }),
-        }),
-      })
-      .mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
           where: subscriptionWhere.mockReturnValue({
             orderBy: orderBy.mockReturnValue({
               limit: limit.mockResolvedValue([
                 {
                   expiresAt: new Date("2026-09-01T00:00:00.000Z"),
+                  id: subscriptionId,
+                  startsAt: new Date("2026-07-01T00:00:00.000Z"),
                   status: "active",
                 },
               ]),
             }),
           }),
         }),
+      })
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: entitlementWhere,
+        }),
       });
     const repository = new EntitlementsRepository({ select } as never);
 
-    await expect(repository.findForUser("user-1")).resolves.toEqual({
+    await expect(repository.findForUser("user-1", now)).resolves.toEqual({
       entitlements: [
         {
           active: true,
@@ -298,26 +296,47 @@ describe("EntitlementsRepository", () => {
       (expression) => dialect.sqlToQuery(expression as never).sql,
     );
 
-    expect({
-      params: entitlementQuery.params,
-      sql: entitlementQuery.sql,
-    }).toEqual({
-      params: ["user-1"],
-      sql: '"entitlements"."user_id" = $1',
-    });
-    expect({
-      params: subscriptionQuery.params,
-      sql: subscriptionQuery.sql,
-    }).toEqual({
-      params: ["user-1"],
-      sql: '"subscriptions"."user_id" = $1',
-    });
+    expect(entitlementQuery.sql).toContain('"entitlements"."user_id" = $');
+    expect(entitlementQuery.sql).toContain(
+      '"entitlements"."subscription_id" = $',
+    );
+    expect(entitlementQuery.params).toEqual(["user-1", subscriptionId]);
+    expect(subscriptionQuery.sql).toContain('"subscriptions"."user_id" = $');
+    expect(subscriptionQuery.sql).toContain('"subscriptions"."status" in ($');
+    expect(subscriptionQuery.sql).toContain('"subscriptions"."starts_at" <= $');
+    expect(subscriptionQuery.sql).toContain('"subscriptions"."expires_at" > $');
+    expect(subscriptionQuery.params).toContain("user-1");
+    expect(subscriptionQuery.params).toContain("active");
+    expect(subscriptionQuery.params).toContain("trial");
+    expect(
+      subscriptionQuery.params.filter(
+        (parameter) => parameter === now.toISOString(),
+      ),
+    ).toHaveLength(2);
     expect(subscriptionOrder).toEqual([
       '"subscriptions"."starts_at" desc',
       '"subscriptions"."created_at" desc',
       '"subscriptions"."id" desc',
     ]);
     expect(limit).toHaveBeenCalledWith(1);
+  });
+
+  it("nao consulta acessos quando nao existe subscricao valida", async () => {
+    const limit = vi.fn().mockResolvedValue([]);
+    const select = vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          orderBy: vi.fn().mockReturnValue({ limit }),
+        }),
+      }),
+    });
+    const repository = new EntitlementsRepository({ select } as never);
+
+    await expect(repository.findForUser("user-1", now)).resolves.toEqual({
+      entitlements: [],
+      subscription: null,
+    });
+    expect(select).toHaveBeenCalledTimes(1);
   });
 
   it("falha de forma clara sem base de dados real", async () => {
