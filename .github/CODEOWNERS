@@ -1,0 +1,7 @@
+.github/CODEOWNERS @atchutchi
+.github/workflows/secret-scan.yml @atchutchi
+.github/workflows/secret-scan-trusted.yml @atchutchi
+.github/workflows/*secret*.yml @atchutchi
+.github/workflows/*security*.yml @atchutchi
+.pre-commit-config.yaml @atchutchi
+docs/security/secrets.md @atchutchi

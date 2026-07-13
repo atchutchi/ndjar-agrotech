@@ -1,6 +1,7 @@
 repos:
   - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.5.0
+    # v1.5.0
+    rev: 68e8b45440415753fff70a312ece8da92ba85b4a # pragma: allowlist secret
     hooks:
       - id: detect-secrets
         exclude: ^pnpm-lock\.yaml$

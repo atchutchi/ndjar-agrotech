@@ -16,6 +16,10 @@ GitGuardian
 
 Depois de autenticar o ggshield com a chave de API apropriada, pode activar-se a verificacao pre-push com ggshield secret install --mode pre-push. Nao a activar antes da autenticacao porque impediria commits por erro de autenticacao.
 
+Proteccao de pull requests
+
+O scan normal corre em push e pull_request. O scan confiavel corre em pull_request_target com a configuracao copiada da base protegida antes de obter o conteudo do PR. pull_request_target nunca pode executar scripts, package managers ou codigo do PR. A proteccao da branch deve exigir o check confiavel e a revisao CODEOWNERS destes ficheiros. GitGuardian continua activo como verificacao externa independente.
+
 Segredo real
 
 Se um segredo real chegar ao repositorio, revoga-o ou roda-o de imediato. Confirma que a nova credencial esta guardada fora do repositorio. So depois remove o valor dos ficheiros e avalia a limpeza de historico segundo o processo de resposta a incidentes. Marca este incidente no GitGuardian como credencial de teste ou falso positivo depois da correccao.
