@@ -34,9 +34,9 @@ const serviceCards = [
 ];
 
 const mvpStates = [
-  "Dados locais carregados por fixtures",
-  "Sem dependência de base de dados real",
-  "Admin com autenticação protegida",
+  "Dados locais de demonstração carregados por fixtures",
+  "Sem ligação a dados operacionais ou base de dados real",
+  "A autenticação administrativa requer PostgreSQL configurado",
   "Recomendações dependem de validação técnica",
 ];
 
@@ -69,9 +69,9 @@ export default function HomePage() {
               N'djar coordena dados agrícolas para decisões no campo.
             </h1>
             <p className="lead">
-              MVP público para acompanhar o piloto de Quinara/Buba, explicar os
-              módulos da app mobile e abrir a entrada de administração sem ligar
-              a contas externas.
+              Demonstração pública baseada apenas em fixtures locais do piloto
+              de Quinara/Buba. Não apresenta dados operacionais nem medições
+              validadas em produção.
             </p>
             <div className="status-strip" aria-label="Estado do MVP">
               <span className="status-dot" aria-hidden="true" />
@@ -127,13 +127,13 @@ export default function HomePage() {
         <div className="section-copy">
           <p className="eyebrow">Base de dados local</p>
           <h2 id="pilot-title">
-            Piloto Quinara/Buba com dados reais dos fixtures.
+            Piloto Quinara/Buba demonstrado apenas com fixtures locais.
           </h2>
           <p>
-            A web mostra o mesmo ponto de partida da app mobile: comunidades do
-            sector de Buba, culturas registadas, calendário agrícola e uma
-            amostra de pH marcada como exemplo. O dado de pH não deve ser usado
-            para dosagem, calagem ou recomendação final.
+            Este conteúdo de demonstração mostra comunidades do sector de Buba,
+            culturas, calendário agrícola e uma amostra de pH marcada como
+            exemplo. Não substitui dados de campo, validação laboratorial ou
+            recomendação técnica.
           </p>
         </div>
         <div className="card-stack">

@@ -1,33 +1,54 @@
-Segredos e credenciais
+# Segredos e credenciais
 
-Incidente
+## Incidente
 
-Um commit de testes introduziu passwords de exemplo com valores fixos. O GitGuardian classificou-as como Generic Password. As strings nao eram credenciais reais mas o padrao era inseguro e o alerta era correcto. As fixtures usam agora valores aleatorios gerados durante cada execucao.
+Um commit de testes introduziu palavras-passe de exemplo com valores fixos. O GitGuardian classificou-as como Generic Password. As strings não eram credenciais reais, mas o padrão era inseguro e o alerta era correcto. Os testes geram agora os valores durante cada execução.
 
-Regra
+## Regra
 
-Nunca guardar credenciais reais, tokens, chaves ou segredos no repositorio. Os campos de configuracao sensiveis no ficheiro .env.example ficam vazios. Define-os apenas no ambiente local, no sistema de configuracao do servico ou no fornecedor de segredos.
+Nunca guardar credenciais reais, tokens, chaves, palavras-passe ou segredos de exemplo no repositório. Os campos sensíveis no `.env.example` ficam vazios. Define-os apenas no processo local, no sistema de configuração do serviço ou num fornecedor de segredos.
 
-Verificacao
+O scanner adicional detecta atribuições literais a nomes sensíveis como password, secret, token, API key e variantes. Também detecta credenciais incorporadas em URLs de base de dados. Valores dinâmicos gerados durante a execução e campos vazios são permitidos.
 
-Executa py -m pre_commit run detect-secrets --all-files. Para instalar a proteccao local, executa py -m pre_commit install. O hook detect-secrets bloqueia novos segredos e nao usa uma baseline que silencie o repositorio.
+## Verificação local
 
-GitGuardian
+Instala o hook com:
 
-Depois de autenticar o ggshield com a chave de API apropriada, pode activar-se a verificacao pre-push com ggshield secret install --mode pre-push. Nao a activar antes da autenticacao porque impediria commits por erro de autenticacao.
+```powershell
+python -m pre_commit install
+```
 
-Proteccao de pull requests
+Verifica o tree actual com:
 
-O scan normal corre apenas em push. O scan de pull requests corre em pull_request_target com a configuracao copiada da base protegida antes de obter o conteudo do PR. pull_request_target nunca pode executar scripts, package managers ou codigo do PR. Todos os checkouts desactivam a persistencia de credenciais. A proteccao da branch deve exigir o check confiavel e a revisao CODEOWNERS de todos os workflows. GitGuardian continua activo como verificacao externa independente.
+```powershell
+python -m pre_commit run --all-files
+python tools/security/scan_git_history.py --tree
+```
 
-Lockfile
+Verifica todos os commits novos de um intervalo com:
 
-O primeiro hook exclui pnpm-lock.yaml para evitar milhares de falsos positivos nos hashes de integridade. Um segundo hook analisa apenas esse ficheiro com os detectores de entropia desactivados. Os restantes detectores continuam activos e podem detectar chaves, tokens e palavras-passe associados a nomes sensiveis.
+```powershell
+python tools/security/scan_git_history.py --base 82ea27f --head HEAD
+```
 
-Pedidos administrativos
+O hook `detect-secrets` existente mantém-se activo. O hook local `generic-credential-tree` cobre credenciais genéricas que os detectores de entropia podem não reconhecer. O gate de histórico recebe sempre uma base e um head explícitos no CI.
 
-Os handlers de login e logout aceitam apenas pedidos POST cuja origem coincide com a origem publica do pedido. Esta verificacao complementa o cookie SameSite. Deve manter-se quando forem adicionadas mutacoes administrativas.
+## Push e pull request
 
-Segredo real
+Os workflows usam `fetch-depth: 0`. Num push, o intervalo é `github.event.before..github.sha`. Num pull request, o intervalo é `github.event.pull_request.base.sha..github.event.pull_request.head.sha`. O scanner percorre cada commit do intervalo. Assim, uma credencial introduzida e apagada num commit posterior continua a bloquear o processo.
 
-Se um segredo real chegar ao repositorio, revoga-o ou roda-o de imediato. Confirma que a nova credencial esta guardada fora do repositorio. So depois remove o valor dos ficheiros e avalia a limpeza de historico segundo o processo de resposta a incidentes. Marca este incidente no GitGuardian como credencial de teste ou falso positivo depois da correccao.
+O workflow de pull request corre em `pull_request_target`. Primeiro obtém a base protegida e copia a configuração do pre-commit e o scanner para `RUNNER_TEMP`. Só depois obtém o conteúdo do PR. A análise usa exclusivamente essas cópias protegidas. O workflow não executa scripts, gestores de pacotes ou configuração do PR. Todos os checkouts usam `persist-credentials: false`.
+
+A protecção da branch deve exigir o check confiável e a revisão CODEOWNERS de todos os workflows. O GitGuardian mantém-se como verificação externa independente.
+
+## Lockfile
+
+O primeiro hook exclui `pnpm-lock.yaml` para evitar falsos positivos nos hashes de integridade. Um segundo hook analisa apenas esse ficheiro com os detectores de entropia desactivados. Os restantes detectores continuam activos e o scanner genérico verifica atribuições sensíveis sem interpretar versões de pacotes como credenciais.
+
+## Pedidos administrativos
+
+Os handlers de login e logout aceitam apenas pedidos POST cuja origem coincide com `NDJAR_PUBLIC_ORIGIN`. Cabeçalhos de proxy só são aceites quando `NDJAR_TRUST_PROXY_HEADERS=true`. Esta opção deve ser usada apenas quando um proxy controlado substitui sempre esses cabeçalhos. Em produção, a ausência de uma origem canónica ou de um proxy explicitamente confiado provoca uma falha fechada.
+
+## Resposta a um segredo real
+
+Se um segredo real chegar ao repositório, revoga-o ou roda-o de imediato. Confirma que a nova credencial está guardada fora do repositório. Só depois remove o valor dos ficheiros e avalia a limpeza de histórico segundo o processo de resposta a incidentes. No GitGuardian, classifica o incidente apenas depois de corrigir a origem do problema.

@@ -287,11 +287,23 @@ function New-NdjarRuntimeSecret {
   [Convert]::ToBase64String($bytes).TrimEnd("=").Replace("+", "-").Replace("/", "_")
 }
 $env:JWT_ACCESS_SECRET = New-NdjarRuntimeSecret
-Remove-Item function:New-NdjarRuntimeSecret
 
 corepack pnpm --filter @ndjar/database exec drizzle-kit push
+
+$env:NDJAR_ALLOW_LOCAL_ADMIN_BOOTSTRAP = "true"
+$env:NDJAR_ADMIN_IDENTIFIER = Read-Host "Identificador do administrador"
+$env:NDJAR_ADMIN_NAME = Read-Host "Nome do administrador"
+$env:NDJAR_ADMIN_PASSWORD = New-NdjarRuntimeSecret
+$env:NDJAR_ADMIN_ROLE = "admin"
+corepack pnpm --filter @ndjar/api db:create-local-admin
+
+Remove-Item Env:NDJAR_ADMIN_PASSWORD
+$env:NDJAR_ALLOW_LOCAL_ADMIN_BOOTSTRAP = "false"
+Remove-Item function:New-NdjarRuntimeSecret
 corepack pnpm --filter @ndjar/api dev
 ```
+
+O bootstrap local só funciona fora de produção, em modo PostgreSQL e quando `NDJAR_ALLOW_LOCAL_ADMIN_BOOTSTRAP=true`. A palavra-passe tem de ter pelo menos 16 caracteres. O comando recusa identificadores já existentes. Depois da criação, remove a palavra-passe do processo e volta a desactivar o bootstrap. Usa `NDJAR_ADMIN_ROLE=super_admin` apenas quando esse nível de acesso é necessário.
 
 Refresh tokens are opaque values generated randomly by the API. The database persists only their hash, so there is no `JWT_REFRESH_SECRET` environment variable.
 
@@ -301,6 +313,8 @@ The Next.js application loads package-local environment files. Prepare `apps/web
 Copy-Item apps/web/.env.example apps/web/.env.local
 corepack pnpm --filter @ndjar/web dev
 ```
+
+`NDJAR_PUBLIC_ORIGIN` define a origem canónica usada na protecção CSRF. Em produção deve apontar para o URL público HTTPS. Mantém `NDJAR_TRUST_PROXY_HEADERS=false`, excepto quando um proxy controlado substitui sempre `X-Forwarded-Host` e `X-Forwarded-Proto`.
 
 See `docs/environment/local-development.md` for the complete local environment procedure. Production must use versioned database migrations rather than `drizzle-kit push`.
 
@@ -333,6 +347,8 @@ corepack pnpm --filter @ndjar/api build
 corepack pnpm --filter @ndjar/web build
 git diff --check
 py -m pre_commit run detect-secrets --all-files
+python tools/security/scan_git_history.py --tree
+python tools/security/scan_git_history.py --base 82ea27f --head HEAD
 ```
 
 Mobile Expo validation:
@@ -378,9 +394,9 @@ The highest-risk tests protect:
 
 ## Security
 
-Secret scanning is active through `detect-secrets` locally and in GitHub Actions. Do not add real credentials, fixed example passwords or generated JWT values to tracked files. GitGuardian remains an external independent check.
+Secret scanning is active through `detect-secrets` and the local generic credential scanner. Do not add real credentials, fixed example passwords or generated JWT values to tracked files. GitGuardian remains an external independent check.
 
-The normal secret-scan workflow runs on pushes. Pull requests use the trusted workflow, which reads its configuration from the protected base branch and never executes repository code. Every checkout disables credential persistence. Branch protection is an external repository setting and still needs to require the trusted check and CODEOWNERS review. The pinned `pre-commit/action` has transitive dependencies that remain mutable at the provider layer.
+Push and pull request scans use the complete Git history and inspect every new commit, including a secret introduced and removed later in the same range. Pull requests use the trusted workflow, which preserves both its configuration and scanner from the protected base branch before reading PR content. It never executes scripts or package managers from the PR. Every checkout disables credential persistence. Branch protection is an external repository setting and still needs to require the trusted check and CODEOWNERS review. The pinned `pre-commit/action` has transitive dependencies that remain mutable at the provider layer.
 
 ## Feature Troubleshooting
 

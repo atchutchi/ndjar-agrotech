@@ -65,4 +65,33 @@ describe("configuração de segurança do repositório", () => {
     expect(readme).toContain("NDJAR_DATABASE_MODE=postgres");
     expect(readme).toContain("apps/web/.env.local");
   });
+
+  it("documenta o bootstrap local sem credenciais fixas", () => {
+    const readme = readRepositoryFile("README.md");
+    const environmentGuide = readRepositoryFile(
+      "docs/environment/local-development.md",
+    );
+    const rootEnvironment = readRepositoryFile(".env.example");
+    const webEnvironment = readRepositoryFile("apps/web/.env.example");
+    const apiPackage = readRepositoryFile("apps/api/package.json");
+
+    for (const variable of [
+      "NDJAR_ALLOW_LOCAL_ADMIN_BOOTSTRAP",
+      "NDJAR_ADMIN_IDENTIFIER",
+      "NDJAR_ADMIN_NAME",
+      "NDJAR_ADMIN_PASSWORD",
+      "NDJAR_ADMIN_ROLE",
+    ]) {
+      expect(readme).toContain(variable);
+      expect(environmentGuide).toContain(variable);
+    }
+    expect(apiPackage).toContain('"db:create-local-admin"');
+    expect(readme).toContain("db:create-local-admin");
+    expect(environmentGuide).toContain("db:create-local-admin");
+    expect(rootEnvironment).toMatch(/^NDJAR_ADMIN_PASSWORD=$/m);
+    expect(webEnvironment).toContain(
+      "NDJAR_PUBLIC_ORIGIN=http://localhost:3000",
+    );
+    expect(webEnvironment).toContain("NDJAR_TRUST_PROXY_HEADERS=false");
+  });
 });

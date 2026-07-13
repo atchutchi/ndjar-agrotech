@@ -5,10 +5,17 @@ import { describe, expect, it } from "vitest";
 import HomePage from "./page";
 
 describe("HomePage", () => {
-  it("descreve a autenticação administrativa implementada", () => {
+  it("limita o conteúdo público a fixtures de demonstração", () => {
     const html = renderToString(<HomePage />);
 
-    expect(html).toContain("Admin com autenticação protegida");
+    expect(html).toContain(
+      "Dados locais de demonstração carregados por fixtures",
+    );
+    expect(html).toContain(
+      "A autenticação administrativa requer PostgreSQL configurado",
+    );
+    expect(html).not.toContain("dados reais dos fixtures");
+    expect(html).not.toContain("Admin com autenticação protegida");
     expect(html).not.toContain("Admin ainda sem autenticação");
   });
 });

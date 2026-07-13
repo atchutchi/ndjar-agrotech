@@ -18,6 +18,8 @@ coverage/
 !.env.example
 *.log
 pnpm-debug.log*
+__pycache__/
+*.pyc
 *.local
 Thumbs.db
 .DS_Store
