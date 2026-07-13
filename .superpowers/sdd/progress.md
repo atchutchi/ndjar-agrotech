@@ -25,7 +25,7 @@ Production foundation Task 8: complete (commits 73897cc..327d4d2, review clean a
 # Final Cross-Cutting Remediation
 Started: 2026-07-13
 Trigger: independent API, mobile, data-domain and web/security reviews of commits 827fdd8..82ea27f
-API/data/domain remediation: complete (commits 121302e..6f22639; final confirmation pending)
+API/data/domain remediation: complete (commits 121302e..2ffa6c1; final confirmation passed)
 Mobile remediation: complete (commits 7f54b83, 1c65178 and f738b17; final review approved with minors)
-Web/security remediation: complete (commits d722450, 31463ba, bdcb2c5, 7f805df, 2ee54b6 and 17d3772; final confirmation pending)
+Web/security remediation: complete (commits d722450, 31463ba, bdcb2c5, 7f805df, 2ee54b6, 17d3772 and db45e0a; final confirmation passed)
 Exit criteria: no open Critical or Important finding, forced monorepo verification, full-tree and history secret scans, clean worktree and push to origin.
