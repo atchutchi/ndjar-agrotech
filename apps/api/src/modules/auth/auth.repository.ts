@@ -300,6 +300,7 @@ export class AuthRepository {
         .innerJoin(userProfiles, eq(userProfiles.userId, users.id))
         .leftJoin(userRoles, eq(userRoles.userId, users.id))
         .leftJoin(roles, eq(roles.id, userRoles.roleId))
+        .for("update")
         .where(
           and(
             eq(refreshTokens.id, parsedToken.selector),

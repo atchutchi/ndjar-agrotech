@@ -16,6 +16,7 @@ function selectChain<T>(
   onInnerJoin?: (table: unknown, condition: unknown) => void,
 ) {
   const chain = {
+    for: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
     innerJoin: vi.fn((table: unknown, condition: unknown) => {
       onInnerJoin?.(table, condition);
@@ -141,6 +142,7 @@ describe("AuthRepository refresh tokens", () => {
       await repositoryWithTransaction(tx).rotateRefreshToken(validRefreshToken);
 
     expect(result).toBeNull();
+    expect(select.for).toHaveBeenCalledWith("update");
     expect(update.where).toHaveBeenCalled();
     expect(insert).not.toHaveBeenCalled();
   });
