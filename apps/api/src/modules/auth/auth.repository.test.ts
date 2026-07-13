@@ -1,5 +1,6 @@
 import { hash } from "argon2";
 import { PgDialect } from "drizzle-orm/pg-core";
+import { drizzle } from "drizzle-orm/postgres-js";
 import { randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ServiceUnavailableException } from "@nestjs/common";
@@ -7,6 +8,7 @@ import { ServiceUnavailableException } from "@nestjs/common";
 import {
   AuthRepository,
   VERIFICATION_CODE_MAX_ATTEMPTS,
+  buildRefreshTokenLockQuery,
   parseRefreshToken,
 } from "./auth.repository.js";
 
@@ -60,6 +62,19 @@ function testHash(value: string) {
 }
 
 describe("AuthRepository refresh tokens", () => {
+  it("bloqueia apenas refresh_tokens antes de consultar a identidade", () => {
+    const database = drizzle({} as never);
+    const query = buildRefreshTokenLockQuery(
+      database as never,
+      validRefreshTokenSelector,
+      new Date("2026-07-13T12:00:00Z"),
+    ).toSQL();
+
+    expect(query.sql).toContain('from "refresh_tokens"');
+    expect(query.sql).not.toContain(" join ");
+    expect(query.sql).toMatch(/ for update$/);
+  });
+
   it("extrai apenas selector UUID canonico e segredo base64url no formato emitido", () => {
     expect(parseRefreshToken(validRefreshToken)).toEqual({
       secret: validRefreshTokenSecret,

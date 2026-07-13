@@ -113,6 +113,30 @@ function expiresInDays(days: number) {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 }
 
+export function buildRefreshTokenLockQuery(
+  database: Pick<Database, "select">,
+  selector: string,
+  now: Date,
+) {
+  return database
+    .select({
+      consumedAt: refreshTokens.consumedAt,
+      familyId: refreshTokens.familyId,
+      refreshTokenHash: refreshTokens.tokenHash,
+      refreshTokenId: refreshTokens.id,
+      revokedAt: refreshTokens.revokedAt,
+      userId: refreshTokens.userId,
+    })
+    .from(refreshTokens)
+    .for("update")
+    .where(
+      and(
+        eq(refreshTokens.id, selector),
+        gt(refreshTokens.expiresAt, now),
+      ),
+    );
+}
+
 @Injectable()
 export class AuthRepository {
   constructor(@Inject(DATABASE) private readonly database: Database | null) {}
@@ -274,21 +298,45 @@ export class AuthRepository {
     const database = this.requireDatabase();
     return database.transaction(async (tx) => {
       const now = new Date();
-      const rows = await tx
+      const lockedTokens = await buildRefreshTokenLockQuery(
+        tx,
+        parsedToken.selector,
+        now,
+      );
+      const lockedToken = lockedTokens[0];
+      if (
+        !lockedToken ||
+        !(await verify(lockedToken.refreshTokenHash, parsedToken.secret))
+      ) {
+        return null;
+      }
+
+      if (lockedToken.consumedAt) {
+        await tx
+          .update(refreshTokens)
+          .set({ revokedAt: now })
+          .where(
+            and(
+              eq(refreshTokens.familyId, lockedToken.familyId),
+              isNull(refreshTokens.revokedAt),
+            ),
+          );
+        return null;
+      }
+
+      if (lockedToken.revokedAt) {
+        return null;
+      }
+
+      const identityRows = await tx
         .select({
-          consumedAt: refreshTokens.consumedAt,
           displayName: users.displayName,
-          familyId: refreshTokens.familyId,
           id: users.id,
           passwordHash: authAccounts.passwordHash,
-          refreshTokenHash: refreshTokens.tokenHash,
-          refreshTokenId: refreshTokens.id,
-          revokedAt: refreshTokens.revokedAt,
           roleId: roles.id,
           verifiedAt: userProfiles.verifiedAt,
         })
-        .from(refreshTokens)
-        .innerJoin(users, eq(refreshTokens.userId, users.id))
+        .from(users)
         .innerJoin(
           authAccounts,
           and(
@@ -300,38 +348,16 @@ export class AuthRepository {
         .innerJoin(userProfiles, eq(userProfiles.userId, users.id))
         .leftJoin(userRoles, eq(userRoles.userId, users.id))
         .leftJoin(roles, eq(roles.id, userRoles.roleId))
-        .for("update")
         .where(
           and(
-            eq(refreshTokens.id, parsedToken.selector),
-            gt(refreshTokens.expiresAt, now),
+            eq(users.id, lockedToken.userId),
             eq(users.isActive, true),
             isNotNull(userProfiles.verifiedAt),
           ),
         );
 
-      const firstRow = rows[0];
-      if (
-        !firstRow ||
-        !(await verify(firstRow.refreshTokenHash, parsedToken.secret))
-      ) {
-        return null;
-      }
-
-      if (firstRow.consumedAt) {
-        await tx
-          .update(refreshTokens)
-          .set({ revokedAt: now })
-          .where(
-            and(
-              eq(refreshTokens.familyId, firstRow.familyId),
-              isNull(refreshTokens.revokedAt),
-            ),
-          );
-        return null;
-      }
-
-      if (firstRow.revokedAt) {
+      const user = this.toAuthUserRecord(identityRows);
+      if (!user) {
         return null;
       }
 
@@ -354,23 +380,18 @@ export class AuthRepository {
           .set({ revokedAt: now })
           .where(
             and(
-              eq(refreshTokens.familyId, firstRow.familyId),
+              eq(refreshTokens.familyId, lockedToken.familyId),
               isNull(refreshTokens.revokedAt),
             ),
           );
         return null;
       }
 
-      const user = this.toAuthUserRecord(rows);
-      if (!user) {
-        return null;
-      }
-
       const nextRefreshToken = newRefreshTokenParts();
       await tx.insert(refreshTokens).values({
         id: nextRefreshToken.selector,
-        familyId: firstRow.familyId,
-        parentTokenId: firstRow.refreshTokenId,
+        familyId: lockedToken.familyId,
+        parentTokenId: lockedToken.refreshTokenId,
         userId: user.id,
         tokenHash: await hash(nextRefreshToken.secret),
         expiresAt: expiresInDays(30),
