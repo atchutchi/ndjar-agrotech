@@ -379,7 +379,7 @@ Android presentation APK:
 powershell -ExecutionPolicy Bypass -File .\tools\build-mobile-presentation-apk.ps1
 ```
 
-This creates `outputs/ndjar-mvp-presentacao-offline-arm64.apk`. Use it for colleague demos on recent Android phones. It embeds `assets/index.android.bundle`, disables the development server path and avoids the Metro error shown by normal debug builds.
+This creates `outputs/ndjar-mvp-presentacao-offline-arm64.apk`. Use it for colleague demos on recent Android phones. For the Android Studio emulator on a PC, run `powershell -ExecutionPolicy Bypass -File .\tools\build-mobile-presentation-apk.ps1 -Architecture x86_64`. It embeds `assets/index.android.bundle`, disables the development server path and avoids the Metro error shown by normal debug builds.
 
 Do not use `assembleDebug` output directly for field demos. A normal debug APK tries to connect to Metro at port `8081` and fails on a phone that is not connected to the development machine. For Play Store or a production pilot, use an EAS or CI signed release build with a real keystore, not this presentation APK.
 
@@ -456,7 +456,7 @@ Hover-only information is not acceptable for public web or admin.
 Planned deployment targets:
 
 - Mobile: Expo and EAS Android builds.
-- Mobile presentation builds: `tools/build-mobile-presentation-apk.ps1` creates an offline APK for demos, signed with the debug key and limited to `arm64-v8a`.
+- Mobile presentation builds: `tools/build-mobile-presentation-apk.ps1` creates an offline APK for demos, signed with the debug key. The default `arm64-v8a` build targets physical Android phones. Use `-Architecture x86_64` for the Android Studio emulator on a PC.
 - Web: Vercel or another Next.js-compatible host.
 - API: Render, Fly.io, Railway, DigitalOcean or a VPS.
 - Database: managed PostgreSQL with PostGIS.

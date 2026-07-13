@@ -1,12 +1,17 @@
 param(
   [string]$BuildPath = "C:\a",
-  [string]$OutputName = "ndjar-mvp-presentacao-offline-arm64.apk"
+  [ValidateSet("arm64-v8a", "x86_64")]
+  [string]$Architecture = "arm64-v8a",
+  [string]$OutputName = ""
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $outputDir = Join-Path $repoRoot "outputs"
+if ([string]::IsNullOrWhiteSpace($OutputName)) {
+  $OutputName = "ndjar-mvp-presentacao-offline-$Architecture.apk"
+}
 $outputApk = Join-Path $outputDir $OutputName
 
 function Assert-UnderPath {
@@ -53,8 +58,9 @@ try {
 
   $appBuildGradle = Join-Path $androidRoot "app\build.gradle"
   $buildGradleText = Get-Content -LiteralPath $appBuildGradle -Raw
-  if ($buildGradleText -notmatch "abiFilters `"arm64-v8a`"") {
-    $buildGradleText = $buildGradleText -replace 'versionName "0.1.0"', "versionName `"0.1.0`"`r`n        ndk {`r`n            abiFilters `"arm64-v8a`"`r`n        }"
+  $abiFilterPattern = "abiFilters `"$Architecture`""
+  if ($buildGradleText -notmatch [regex]::Escape($abiFilterPattern)) {
+    $buildGradleText = $buildGradleText -replace 'versionName "0.1.0"', "versionName `"0.1.0`"`r`n        ndk {`r`n            $abiFilterPattern`r`n        }"
   }
   Set-Content -LiteralPath $appBuildGradle -Value $buildGradleText
 
@@ -88,7 +94,7 @@ try {
   $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
   $env:NODE_ENV = "production"
 
-  & (Join-Path $androidRoot "gradlew.bat") -p $androidRoot assembleDebug -PreactNativeArchitectures=arm64-v8a --console=plain --no-daemon
+  & (Join-Path $androidRoot "gradlew.bat") -p $androidRoot assembleDebug "-PreactNativeArchitectures=$Architecture" --console=plain --no-daemon
 
   New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
   Copy-Item -LiteralPath (Join-Path $androidRoot "app\build\outputs\apk\debug\app-debug.apk") -Destination $outputApk -Force
@@ -106,8 +112,16 @@ try {
 
   Write-Output "Presentation APK created: $outputApk"
 } finally {
-  git -C $repoRoot worktree remove --force $BuildPath 2>$null
-  if (Test-Path -LiteralPath $BuildPath) {
-    Remove-Item -LiteralPath "\\?\$BuildPath" -Recurse -Force -ErrorAction SilentlyContinue
+  try {
+    $null = git -C $repoRoot worktree remove --force $BuildPath 2>&1
+  } catch {
+    # Git can unregister the worktree while Windows rejects a long-path cleanup.
+  }
+  try {
+    if (Test-Path -LiteralPath $BuildPath) {
+      Remove-Item -LiteralPath "\\?\$BuildPath" -Recurse -Force -ErrorAction SilentlyContinue
+    }
+  } catch {
+    # A leftover temporary directory must not turn a successful APK build into a failure.
   }
 }
