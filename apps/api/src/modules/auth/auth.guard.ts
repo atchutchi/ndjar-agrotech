@@ -3,6 +3,7 @@ import {
   type ExecutionContext,
   Injectable,
   Inject,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from "@nestjs/common";
 
@@ -62,7 +63,11 @@ export class AuthGuard implements CanActivate {
       };
 
       return true;
-    } catch {
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) {
+        throw error;
+      }
+
       throw new UnauthorizedException("Sessão obrigatória");
     }
   }

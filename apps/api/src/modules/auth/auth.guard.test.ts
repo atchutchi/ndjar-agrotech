@@ -1,4 +1,8 @@
-import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
+import {
+  ForbiddenException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -71,6 +75,23 @@ describe("AuthGuard", () => {
         }),
       ),
     ).rejects.toThrow(new UnauthorizedException("Sessão obrigatória"));
+  });
+
+  it("preserva 503 quando a base de dados esta indisponivel", async () => {
+    repository.findById.mockRejectedValue(
+      new ServiceUnavailableException("Base de dados indisponivel"),
+    );
+    const token = await signAccessToken({ roles: ["farmer"], sub: "user-1" });
+
+    await expect(
+      createGuard().canActivate(
+        requestContext({
+          headers: { authorization: `Bearer ${token}` },
+        }),
+      ),
+    ).rejects.toThrow(
+      new ServiceUnavailableException("Base de dados indisponivel"),
+    );
   });
 
   it("usa os papeis actuais da base de dados e nao os papeis antigos do JWT", async () => {
