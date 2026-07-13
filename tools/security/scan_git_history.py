@@ -215,6 +215,17 @@ def is_validation_sentinel(path: str, value: str) -> bool:
     return bool(test_file) and value.lower() in {"short"}
 
 
+def is_dynamic_powershell_command(
+    line: str, assignment_match: re.Match[str], raw_value: str
+) -> bool:
+    variable_prefix = line[: assignment_match.start()]
+    command = raw_value.strip()
+    return bool(
+        re.search(r"\$(?:env:)?$", variable_prefix, re.IGNORECASE)
+        and re.fullmatch(r"[A-Z][A-Za-z0-9]*-[A-Z][A-Za-z0-9-]*", command)
+    )
+
+
 def concrete_url_component(value: str) -> bool:
     placeholders = ("$", "{", "}", "<", ">", "%")
     return bool(value) and not any(marker in value for marker in placeholders)
@@ -257,6 +268,8 @@ def inspect_line(
         if not credential_key_is_sensitive(assignment_match.group("key")):
             continue
         raw_value = extract_assigned_value(line, assignment_match.end())
+        if is_dynamic_powershell_command(line, assignment_match, raw_value):
+            continue
         literal = normalise_literal(
             raw_value,
             bare_identifier_is_literal=Path(path).suffix.lower() == ".env",

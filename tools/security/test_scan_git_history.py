@@ -120,6 +120,11 @@ class GitHistorySecretScanTest(unittest.TestCase):
                 f"integrity: sha512-{secrets.token_urlsafe(48)}==\n",
                 encoding="utf-8",
             )
+            powershell_key = "JWT_ACCESS_" + "SECRET"
+            (repository / "bootstrap.ps1").write_text(
+                f"$env:{powershell_key} = New-NdjarRuntimeSecret\n",
+                encoding="utf-8",
+            )
             self.commit_all(repository, "non credential metadata")
 
             result = self.run_scanner(repository, "--tree", check=False)
