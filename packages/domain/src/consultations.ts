@@ -59,20 +59,10 @@ export interface ConsultationQuestion {
   cropId?: string;
   regionId?: string;
   language?: string;
-  reviewedAnswer?: ReviewedAnswerReference;
-}
-
-export interface ReviewedAnswerReference {
-  reviewedAt: string;
-  reviewedByUserId: string;
-  templateId: string;
 }
 
 export type EscalationReason =
-  | "reviewed_answer_available"
-  | "chemical_or_dosage_risk"
-  | "severe_pest_risk"
-  | "no_safe_answer";
+  "chemical_or_dosage_risk" | "severe_pest_risk" | "no_safe_answer";
 
 export interface EscalationDecision {
   shouldEscalate: boolean;
@@ -112,18 +102,6 @@ export function shouldEscalateQuestion(
       shouldEscalate: true,
       reason: "severe_pest_risk",
       matchedRiskTerms: pestMatches,
-    };
-  }
-
-  if (
-    input.reviewedAnswer?.templateId &&
-    input.reviewedAnswer.reviewedByUserId &&
-    Number.isFinite(Date.parse(input.reviewedAnswer.reviewedAt))
-  ) {
-    return {
-      shouldEscalate: false,
-      reason: "reviewed_answer_available",
-      matchedRiskTerms: [],
     };
   }
 

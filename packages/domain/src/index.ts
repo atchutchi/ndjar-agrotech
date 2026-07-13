@@ -14,7 +14,6 @@ export {
   type ConsultationQuestion,
   type EscalationDecision,
   type EscalationReason,
-  type ReviewedAnswerReference,
 } from "./consultations.js";
 export {
   resolveOfflineSyncStrategy,

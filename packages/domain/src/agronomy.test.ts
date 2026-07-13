@@ -7,12 +7,6 @@ import {
   type ConsultationQuestion,
 } from "./index.js";
 
-const reviewedAnswer = {
-  reviewedAt: "2026-07-13T10:00:00.000Z",
-  reviewedByUserId: "doctor-1",
-  templateId: "soil-ph-explanation-v1",
-};
-
 describe("classifyPhValue", () => {
   it("classifies pH using chemical bands without implying crop suitability", () => {
     expect(classifyPhValue(4.49)).toBe("strongly-acidic");
@@ -52,15 +46,14 @@ describe("createSampleRecord", () => {
 });
 
 describe("shouldEscalateQuestion", () => {
-  it("does not escalate when reviewed content answers a low-risk question", () => {
+  it("does not accept caller-provided review as proof", () => {
     const input: ConsultationQuestion = {
       text: "Qual o significado de um pH 6.2 no solo?",
-      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
-      shouldEscalate: false,
-      reason: "reviewed_answer_available",
+      shouldEscalate: true,
+      reason: "no_safe_answer",
       matchedRiskTerms: [],
     });
   });
@@ -80,7 +73,6 @@ describe("shouldEscalateQuestion", () => {
   it("escalates pesticide and herbicide questions even with reviewed content", () => {
     const input: ConsultationQuestion = {
       text: "Posso usar pesticida e herbicida na mesma semana na mandioca?",
-      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -93,7 +85,6 @@ describe("shouldEscalateQuestion", () => {
   it("escalates chemical dosage questions with explicit chemical wording", () => {
     const input: ConsultationQuestion = {
       text: "Qual a dosagem deste quimico para o tomate?",
-      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -106,7 +97,6 @@ describe("shouldEscalateQuestion", () => {
   it("escalates unknown product questions even when phrased indirectly", () => {
     const input: ConsultationQuestion = {
       text: "Nao sei que produto e este, posso usar?",
-      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -119,7 +109,6 @@ describe("shouldEscalateQuestion", () => {
   it("escalates treatment burn reports after application", () => {
     const input: ConsultationQuestion = {
       text: "As folhas ficaram queimadas depois do tratamento. O que faco?",
-      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -132,7 +121,6 @@ describe("shouldEscalateQuestion", () => {
   it("escalates mixing questions even when the products are not named", () => {
     const input: ConsultationQuestion = {
       text: "Posso misturar dois produtos?",
-      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -145,7 +133,6 @@ describe("shouldEscalateQuestion", () => {
   it("escalates spray dosage questions with operational wording", () => {
     const input: ConsultationQuestion = {
       text: "Qual e a dose para pulverizar?",
-      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -158,7 +145,6 @@ describe("shouldEscalateQuestion", () => {
   it("escalates exact reapplication timing questions even with reviewed content", () => {
     const input: ConsultationQuestion = {
       text: "Quando volto a aplicar?",
-      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -171,7 +157,6 @@ describe("shouldEscalateQuestion", () => {
   it("escalates exact harvest waiting-period questions even with reviewed content", () => {
     const input: ConsultationQuestion = {
       text: "Quanto tempo devo esperar antes da colheita?",
-      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -188,7 +173,6 @@ describe("shouldEscalateQuestion", () => {
   it("escalates exact parcel re-entry questions even with reviewed content", () => {
     const input: ConsultationQuestion = {
       text: "Posso entrar na parcela amanha?",
-      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
