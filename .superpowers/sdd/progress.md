@@ -18,3 +18,4 @@ Production foundation Task 3: complete (commits ce0dfa4..d537061, review approve
 Production foundation Task 4: complete (commits 9ae2c70..0595560, review clean after auth guard and disabled-account refresh fixes)
 Production foundation Task 5: complete (commits 95ee01c..cc63723, review approved; minors: add handler-over-class metadata precedence test and correct task-5 report file list)
 Security secret prevention: complete (commits cc63723..4e0dc44, review approved after immutable pins and trusted PR scan; minor: pre-commit/action has a mutable transitive cache dependency)
+Production foundation Task 6: complete (commits 83eddfa..87f3b5b, review approved after redirect and UTF-8 fixes; encoding findings retracted after explicit UTF-8 verification)
