@@ -5,4 +5,6 @@
 .github/workflows/*secret*.yml @atchutchi
 .github/workflows/*security*.yml @atchutchi
 .pre-commit-config.yaml @atchutchi
-docs/security/secrets.md @atchutchi
+tools/security/** @atchutchi
+docs/security/** @atchutchi
+.superpowers/sdd/security-secrets-report.md @atchutchi

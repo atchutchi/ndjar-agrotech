@@ -22,7 +22,7 @@ describe("configuração de segurança do repositório", () => {
     );
   });
 
-  it("usa apenas configuraÃ§Ã£o e scanner preservados da base no PR", () => {
+  it("usa apenas configuração e scanner preservados da base no PR", () => {
     const workflow = readRepositoryFile(
       ".github/workflows/secret-scan-trusted.yml",
     );
@@ -43,6 +43,12 @@ describe("configuração de segurança do repositório", () => {
     const codeowners = readRepositoryFile(".github/CODEOWNERS");
 
     expect(codeowners).toMatch(/^\.github\/workflows\/\*\*\s+@atchutchi$/m);
+    expect(codeowners).toMatch(/^\.pre-commit-config\.yaml\s+@atchutchi$/m);
+    expect(codeowners).toMatch(/^tools\/security\/\*\*\s+@atchutchi$/m);
+    expect(codeowners).toMatch(/^docs\/security\/\*\*\s+@atchutchi$/m);
+    expect(codeowners).toMatch(
+      /^\.superpowers\/sdd\/security-secrets-report\.md\s+@atchutchi$/m,
+    );
   });
 
   it("analisa o lockfile sem depender dos detectores de entropia", () => {
@@ -93,5 +99,13 @@ describe("configuração de segurança do repositório", () => {
       "NDJAR_PUBLIC_ORIGIN=http://localhost:3000",
     );
     expect(webEnvironment).toContain("NDJAR_TRUST_PROXY_HEADERS=false");
+    for (const guide of [readme, environmentGuide]) {
+      expect(guide).toContain("-AsSecureString");
+      expect(guide).toContain("SecureStringToBSTR");
+      expect(guide).toContain("ZeroFreeBSTR");
+      expect(guide).not.toContain(
+        "NDJAR_ADMIN_PASSWORD " + "= New-NdjarRuntimeSecret",
+      );
+    }
   });
 });

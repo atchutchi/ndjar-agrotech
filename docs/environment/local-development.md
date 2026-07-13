@@ -26,26 +26,35 @@ function New-NdjarRuntimeSecret {
   [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
   [Convert]::ToBase64String($bytes).TrimEnd("=").Replace("+", "-").Replace("/", "_")
 }
-$env:JWT_ACCESS_SECRET = New-NdjarRuntimeSecret
+$jwtRuntimeSecret = (New-NdjarRuntimeSecret)
+$env:JWT_ACCESS_SECRET = $jwtRuntimeSecret
+Remove-Variable jwtRuntimeSecret
 
 corepack pnpm --filter @ndjar/database exec drizzle-kit push
 
 $env:NDJAR_ALLOW_LOCAL_ADMIN_BOOTSTRAP = "true"
 $env:NDJAR_ADMIN_IDENTIFIER = Read-Host "Identificador do administrador"
 $env:NDJAR_ADMIN_NAME = Read-Host "Nome do administrador"
-$env:NDJAR_ADMIN_PASSWORD = New-NdjarRuntimeSecret
 $env:NDJAR_ADMIN_ROLE = "admin"
-corepack pnpm --filter @ndjar/api db:create-local-admin
+$secureAdminPassword = Read-Host "Palavra-passe do administrador, minimo 16 caracteres" -AsSecureString
+$adminPasswordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureAdminPassword)
+try {
+  $env:NDJAR_ADMIN_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($adminPasswordPointer)
+  corepack pnpm --filter @ndjar/api db:create-local-admin
+} finally {
+  Remove-Item Env:NDJAR_ADMIN_PASSWORD -ErrorAction SilentlyContinue
+  [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($adminPasswordPointer)
+  Remove-Variable secureAdminPassword, adminPasswordPointer -ErrorAction SilentlyContinue
+  $env:NDJAR_ALLOW_LOCAL_ADMIN_BOOTSTRAP = "false"
+}
 
-Remove-Item Env:NDJAR_ADMIN_PASSWORD
-$env:NDJAR_ALLOW_LOCAL_ADMIN_BOOTSTRAP = "false"
 Remove-Item function:New-NdjarRuntimeSecret
 corepack pnpm --filter @ndjar/api dev
 ```
 
 O comando `drizzle-kit push` é adequado para desenvolvimento local. A produção precisa de migrações versionadas antes do primeiro lançamento.
 
-O comando `db:create-local-admin` exige PostgreSQL, recusa `NODE_ENV=production` e só arranca quando `NDJAR_ALLOW_LOCAL_ADMIN_BOOTSTRAP=true`. Define `NDJAR_ADMIN_IDENTIFIER` e `NDJAR_ADMIN_NAME` no terminal. Gera `NDJAR_ADMIN_PASSWORD` em memória com pelo menos 16 caracteres. Usa `NDJAR_ADMIN_ROLE=admin` por defeito e reserva `super_admin` para operações que precisem desse privilégio. O comando recusa um identificador existente. Depois da criação, apaga a palavra-passe do processo e desactiva novamente o bootstrap.
+O comando `db:create-local-admin` exige PostgreSQL, recusa `NODE_ENV=production` e só arranca quando `NDJAR_ALLOW_LOCAL_ADMIN_BOOTSTRAP=true`. Define `NDJAR_ADMIN_IDENTIFIER` e `NDJAR_ADMIN_NAME` no terminal. Introduz `NDJAR_ADMIN_PASSWORD` com pelo menos 16 caracteres através de `Read-Host -AsSecureString`, para que o valor não entre no histórico. Usa `NDJAR_ADMIN_ROLE=admin` por defeito e reserva `super_admin` para operações que precisem desse privilégio. O comando recusa um identificador existente. O bloco `finally` apaga a palavra-passe do processo, limpa o buffer BSTR e desactiva novamente o bootstrap.
 
 ## Web
 

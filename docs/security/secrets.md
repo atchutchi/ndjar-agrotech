@@ -10,6 +10,10 @@ Nunca guardar credenciais reais, tokens, chaves, palavras-passe ou segredos de e
 
 O scanner adicional detecta atribuições literais a nomes sensíveis como password, secret, token, API key e variantes. Também detecta credenciais incorporadas em URLs de base de dados. Valores dinâmicos gerados durante a execução e campos vazios são permitidos.
 
+## Regra de allowlist
+
+`pragma: allowlist secret` é proibido em código e configuração comum. O scanner só o aceita em `.pre-commit-config.yaml`, `tools/security/`, `docs/security/`, nos workflows `secret-scan` e no relatório de segurança legado explicitamente listado. Todos esses caminhos têm proprietário obrigatório em `.github/CODEOWNERS`. Um pragma fora destes caminhos é um finding, mesmo quando não existe outra credencial na linha.
+
 ## Verificação local
 
 Instala o hook com:

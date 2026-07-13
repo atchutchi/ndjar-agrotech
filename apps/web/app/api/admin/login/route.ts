@@ -1,18 +1,22 @@
 import { NextResponse } from "next/server";
 
-import { isSameOriginRequest } from "../../../../lib/admin-origin";
+import {
+  getPublicRequestOrigin,
+  isSameOriginRequest,
+} from "../../../../lib/admin-origin";
 import {
   ADMIN_ACCESS_COOKIE,
   ADMIN_ACCESS_MAX_AGE,
   isAdminLoginSession,
 } from "../../../../lib/admin-session";
 
-function redirectTo(request: Request, path: string) {
-  return NextResponse.redirect(new URL(path, request.url), 303);
+function redirectTo(publicOrigin: string, path: string) {
+  return NextResponse.redirect(new URL(path, publicOrigin), 303);
 }
 
 export async function POST(request: Request) {
-  if (!isSameOriginRequest(request)) {
+  const publicOrigin = getPublicRequestOrigin(request);
+  if (!publicOrigin || !isSameOriginRequest(request)) {
     return NextResponse.json({ error: "origin_not_allowed" }, { status: 403 });
   }
 
@@ -42,10 +46,10 @@ export async function POST(request: Request) {
   } catch {}
 
   if (!session) {
-    return redirectTo(request, "/admin/login?error=invalid");
+    return redirectTo(publicOrigin, "/admin/login?error=invalid");
   }
 
-  const response = redirectTo(request, "/admin");
+  const response = redirectTo(publicOrigin, "/admin");
   response.cookies.set(ADMIN_ACCESS_COOKIE, session.accessToken, {
     httpOnly: true,
     maxAge: ADMIN_ACCESS_MAX_AGE,

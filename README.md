@@ -286,24 +286,33 @@ function New-NdjarRuntimeSecret {
   [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
   [Convert]::ToBase64String($bytes).TrimEnd("=").Replace("+", "-").Replace("/", "_")
 }
-$env:JWT_ACCESS_SECRET = New-NdjarRuntimeSecret
+$jwtRuntimeSecret = (New-NdjarRuntimeSecret)
+$env:JWT_ACCESS_SECRET = $jwtRuntimeSecret
+Remove-Variable jwtRuntimeSecret
 
 corepack pnpm --filter @ndjar/database exec drizzle-kit push
 
 $env:NDJAR_ALLOW_LOCAL_ADMIN_BOOTSTRAP = "true"
 $env:NDJAR_ADMIN_IDENTIFIER = Read-Host "Identificador do administrador"
 $env:NDJAR_ADMIN_NAME = Read-Host "Nome do administrador"
-$env:NDJAR_ADMIN_PASSWORD = New-NdjarRuntimeSecret
 $env:NDJAR_ADMIN_ROLE = "admin"
-corepack pnpm --filter @ndjar/api db:create-local-admin
+$secureAdminPassword = Read-Host "Palavra-passe do administrador, minimo 16 caracteres" -AsSecureString
+$adminPasswordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureAdminPassword)
+try {
+  $env:NDJAR_ADMIN_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($adminPasswordPointer)
+  corepack pnpm --filter @ndjar/api db:create-local-admin
+} finally {
+  Remove-Item Env:NDJAR_ADMIN_PASSWORD -ErrorAction SilentlyContinue
+  [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($adminPasswordPointer)
+  Remove-Variable secureAdminPassword, adminPasswordPointer -ErrorAction SilentlyContinue
+  $env:NDJAR_ALLOW_LOCAL_ADMIN_BOOTSTRAP = "false"
+}
 
-Remove-Item Env:NDJAR_ADMIN_PASSWORD
-$env:NDJAR_ALLOW_LOCAL_ADMIN_BOOTSTRAP = "false"
 Remove-Item function:New-NdjarRuntimeSecret
 corepack pnpm --filter @ndjar/api dev
 ```
 
-O bootstrap local só funciona fora de produção, em modo PostgreSQL e quando `NDJAR_ALLOW_LOCAL_ADMIN_BOOTSTRAP=true`. A palavra-passe tem de ter pelo menos 16 caracteres. O comando recusa identificadores já existentes. Depois da criação, remove a palavra-passe do processo e volta a desactivar o bootstrap. Usa `NDJAR_ADMIN_ROLE=super_admin` apenas quando esse nível de acesso é necessário.
+O bootstrap local só funciona fora de produção, em modo PostgreSQL e quando `NDJAR_ALLOW_LOCAL_ADMIN_BOOTSTRAP=true`. A palavra-passe tem de ter pelo menos 16 caracteres. `Read-Host -AsSecureString` impede que o valor entre no histórico do PowerShell. O bloco `finally` remove a variável de ambiente, limpa o buffer temporário e volta a desactivar o bootstrap. O comando recusa identificadores já existentes. Usa `NDJAR_ADMIN_ROLE=super_admin` apenas quando esse nível de acesso é necessário.
 
 Refresh tokens are opaque values generated randomly by the API. The database persists only their hash, so there is no `JWT_REFRESH_SECRET` environment variable.
 

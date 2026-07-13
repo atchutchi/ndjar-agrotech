@@ -3,14 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "./route";
 
-function loginRequest(origin = "https://admin.example.test") {
+function loginRequest(
+  origin = "https://admin.example.test",
+  url = "https://admin.example.test/api/admin/login",
+  extraHeaders: Record<string, string> = {},
+) {
   const formData = new FormData();
   formData.set("identifier", "admin@example.test");
   formData.set("password", randomUUID());
 
-  return new Request("https://admin.example.test/api/admin/login", {
+  return new Request(url, {
     body: formData,
-    headers: { origin },
+    headers: { origin, ...extraHeaders },
     method: "POST",
   });
 }
@@ -18,7 +22,33 @@ function loginRequest(origin = "https://admin.example.test") {
 describe("POST /api/admin/login", () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     process.env.NDJAR_API_URL = "https://api.example.test";
+  });
+
+  it("redirecciona para a origem pública canónica", async () => {
+    vi.stubEnv("NDJAR_PUBLIC_ORIGIN", "https://admin.example.test");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          accessToken: randomUUID(),
+          user: { roles: ["admin"] },
+        }),
+      ),
+    );
+
+    const response = await POST(
+      loginRequest(
+        "https://admin.example.test",
+        "http://web-internal:3000/api/admin/login",
+      ),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "https://admin.example.test/admin",
+    );
   });
 
   it("cria a sessão e responde com 303 para o papel admin", async () => {

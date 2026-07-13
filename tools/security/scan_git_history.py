@@ -1,28 +1,51 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import os
 import re
-import shlex
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 
-SENSITIVE_ASSIGNMENT = re.compile(
-    r"""^\s*(?:export\s+)?[\"']?
-    (?P<key>[A-Za-z0-9_.-]*(?:password|passwd|pwd|secret|token|api[_-]?key|
-    client[_-]?secret|access[_-]?token|refresh[_-]?token|jwt[_-]?secret)
-    [A-Za-z0-9_.-]*)[\"']?\s*[:=]\s*(?P<value>.+?)\s*[,;]?\s*$""",
-    re.IGNORECASE | re.VERBOSE,
+SENSITIVE_KEY = (
+    r"[A-Za-z0-9_.-]*(?:password|passwd|pwd|secret|token|api[_-]?key)"
+    r"[A-Za-z0-9_.-]*"
 )
-DATABASE_CREDENTIAL = re.compile(
-    r"(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis|amqps?)://"
+SENSITIVE_ASSIGNMENT = re.compile(
+    rf"(?<![A-Za-z0-9_.-])[\"']?(?P<key>{SENSITIVE_KEY})[\"']?\s*"
+    r"(?::|(?<![=!<>])=(?!=))\s*",
+    re.IGNORECASE,
+)
+URL_CREDENTIAL = re.compile(
+    r"(?P<scheme>[A-Za-z][A-Za-z0-9+.-]*)://"
     r"(?P<user>[^\s:/@]+):(?P<password>[^\s/@]+)@",
     re.IGNORECASE,
 )
-HUNK_HEADER = re.compile(r"^@@ -\d+(?:,\d+)? \+(?P<line>\d+)(?:,\d+)? @@")
+XML_ELEMENT = re.compile(
+    rf"<(?P<key>{SENSITIVE_KEY})\b[^>]*>(?P<value>[^<]+)</[^>]+>",
+    re.IGNORECASE,
+)
+XML_NAMED_VALUE = re.compile(
+    rf"\bname\s*=\s*(?P<name_quote>[\"'])(?P<key>{SENSITIVE_KEY})"
+    r"(?P=name_quote)[^>]*\bvalue\s*=\s*(?P<value_quote>[\"'])"
+    r"(?P<value>.*?)(?P=value_quote)",
+    re.IGNORECASE,
+)
+ALLOWLIST_PRAGMA = "pragma: allowlist secret"
+DATABASE_SCHEMES = {
+    "amqp",
+    "amqps",
+    "mariadb",
+    "mongodb",
+    "mongodb+srv",
+    "mysql",
+    "postgres",
+    "postgresql",
+    "redis",
+}
 ZERO_SHA = "0" * 40
 
 
@@ -55,84 +78,214 @@ def run_git(repository: Path, *arguments: str) -> str:
     return result.stdout
 
 
-def normalise_literal(raw_value: str) -> str | None:
+def run_git_bytes(
+    repository: Path, *arguments: str, allow_failure: bool = False
+) -> bytes | None:
+    result = subprocess.run(
+        ["git", *arguments],
+        cwd=repository,
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        if allow_failure:
+            return None
+        message = result.stderr.decode("utf-8", errors="replace").strip()
+        raise RuntimeError(message or "Git command failed")
+    return result.stdout
+
+
+def normalise_literal(
+    raw_value: str, *, bare_identifier_is_literal: bool = False
+) -> str | None:
     value = raw_value.strip().rstrip(",;").strip()
     is_quoted = (
-        len(value) >= 2 and value[0] in {"\"", "'"} and value[-1] == value[0]
+        len(value) >= 2
+        and value[0] in {"\"", "'", "`"}
+        and value[-1] == value[0]
     )
     if is_quoted:
         value = value[1:-1].strip()
 
     if not value:
         return None
+    if (value.startswith("<") and value.endswith(">")) or value.startswith("%"):
+        return None
+    if value.startswith("${") and value.endswith("}"):
+        return None
 
     if not is_quoted:
-        if any(character.isspace() for character in value):
+        if value[0] in "${[(" or value in {
+            "true",
+            "false",
+            "null",
+            "undefined",
+        }:
             return None
-        if value[0] in "{[(" or value in {"true", "false", "null", "undefined"}:
+        if re.fullmatch(r"\d+(?:\.\d+)?", value):
             return None
         if re.fullmatch(r"v?\d+(?:\.\d+)+(?:[-+][A-Za-z0-9.-]+)?", value):
             return None
-
-    lower_value = value.lower()
-    dynamic_markers = (
-        "${",
-        "$env:",
-        "process.env",
-        "import.meta.env",
-        "os.environ",
-        "getenv(",
-        "read-host",
-        "randombytes(",
-        "randomnumbergenerator",
-        "token_urlsafe(",
-        "secrets.",
-        "crypto.",
-        "prompt(",
-        "input(",
-    )
-    if any(marker in lower_value for marker in dynamic_markers):
-        return None
-    if (value.startswith("<") and value.endswith(">")) or value.startswith("%"):
-        return None
-    if not is_quoted:
-        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.]*", value):
+        if value.startswith("/") or any(character in value for character in "[]<>"):
+            return None
+        lower_value = value.lower()
+        dynamic_markers = (
+            "process.env",
+            "import.meta.env",
+            "os.environ",
+            "getenv(",
+            "read-host",
+            "randombytes(",
+            "randomnumbergenerator",
+            "token_urlsafe(",
+            "secrets.",
+            "crypto.",
+            "prompt(",
+            "input(",
+        )
+        if any(marker in lower_value for marker in dynamic_markers):
+            return None
+        if not bare_identifier_is_literal and re.fullmatch(
+            r"[A-Za-z_][A-Za-z0-9_.]*", value
+        ):
             return None
         if "(" in value or ")" in value:
             return None
     return value
 
 
-def inspect_line(path: str, line_number: int, line: str, commit: str | None = None) -> list[Finding]:
-    if "pragma: allowlist secret" in line:
-        return []
+def extract_assigned_value(line: str, start: int) -> str:
+    remainder = line[start:].lstrip()
+    if not remainder:
+        return ""
+    if remainder[0] in {"\"", "'", "`"}:
+        quote = remainder[0]
+        escaped = False
+        for index, character in enumerate(remainder[1:], start=1):
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                return remainder[: index + 1]
+        return remainder
+
+    end = len(remainder)
+    for index, character in enumerate(remainder):
+        if character.isspace() or character in ",;}]#":
+            end = index
+            break
+    return remainder[:end]
+
+
+def pragma_is_allowed(path: str) -> bool:
+    normalised_path = path.replace("\\", "/")
+    return (
+        normalised_path == ".pre-commit-config.yaml"
+        or normalised_path.startswith("tools/security/")
+        or normalised_path.startswith("docs/security/")
+        or normalised_path.startswith(".github/workflows/secret-scan")
+        or normalised_path == ".superpowers/sdd/security-secrets-report.md"
+    )
+
+
+def credential_key_is_sensitive(key: str) -> bool:
+    key_without_path = key.rsplit(".", 1)[-1]
+    words = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key_without_path)
+    words = [word.lower() for word in re.split(r"[^A-Za-z0-9]+", words) if word]
+    metadata_suffixes = {
+        "column",
+        "field",
+        "hash",
+        "id",
+        "ids",
+        "index",
+        "input",
+        "length",
+        "name",
+        "pattern",
+        "selector",
+        "type",
+    }
+    return bool(words) and words[-1] not in metadata_suffixes
+
+
+def is_validation_sentinel(path: str, value: str) -> bool:
+    test_file = re.search(r"\.(?:test|spec)\.[cm]?[jt]sx?$", path, re.IGNORECASE)
+    return bool(test_file) and value.lower() in {"short"}
+
+
+def concrete_url_component(value: str) -> bool:
+    placeholders = ("$", "{", "}", "<", ">", "%")
+    return bool(value) and not any(marker in value for marker in placeholders)
+
+
+def inspect_line(
+    path: str, line_number: int, line: str, commit: str | None = None
+) -> list[Finding]:
+    if ALLOWLIST_PRAGMA in line:
+        if pragma_is_allowed(path):
+            return []
+        pragma_finding = Finding(
+            path,
+            line_number,
+            "Allowlist pragma is not permitted outside protected security files",
+            commit,
+        )
+    else:
+        pragma_finding = None
 
     findings: list[Finding] = []
-    database_match = DATABASE_CREDENTIAL.search(line)
-    if database_match:
-        user = database_match.group("user")
-        password = database_match.group("password")
-        placeholders = ("$", "{", "}", "<", ">", "%")
-        has_literal_credentials = all(
-            value and not any(marker in value for marker in placeholders)
-            for value in (user, password)
+    if pragma_finding:
+        findings.append(pragma_finding)
+
+    for url_match in URL_CREDENTIAL.finditer(line):
+        if not all(
+            concrete_url_component(url_match.group(group))
+            for group in ("user", "password")
+        ):
+            continue
+        scheme = url_match.group("scheme").lower()
+        reason = (
+            "Database URL embeds literal credentials"
+            if scheme in DATABASE_SCHEMES
+            else "URL embeds literal credentials"
         )
-        if has_literal_credentials:
+        findings.append(Finding(path, line_number, reason, commit))
+
+    for assignment_match in SENSITIVE_ASSIGNMENT.finditer(line):
+        if not credential_key_is_sensitive(assignment_match.group("key")):
+            continue
+        raw_value = extract_assigned_value(line, assignment_match.end())
+        literal = normalise_literal(
+            raw_value,
+            bare_identifier_is_literal=Path(path).suffix.lower() == ".env",
+        )
+        if literal and not is_validation_sentinel(path, literal):
             findings.append(
-                Finding(path, line_number, "Database URL embeds literal credentials", commit)
+                Finding(
+                    path,
+                    line_number,
+                    "Generic credential literal assigned to "
+                    f"{assignment_match.group('key')}",
+                    commit,
+                )
             )
 
-    assignment_match = SENSITIVE_ASSIGNMENT.match(line)
-    if assignment_match and normalise_literal(assignment_match.group("value")):
-        findings.append(
-            Finding(
-                path,
-                line_number,
-                f"Generic credential literal assigned to {assignment_match.group('key')}",
-                commit,
-            )
-        )
-    return findings
+    for xml_pattern in (XML_ELEMENT, XML_NAMED_VALUE):
+        for xml_match in xml_pattern.finditer(line):
+            if normalise_literal(f'"{xml_match.group("value")}"'):
+                findings.append(
+                    Finding(
+                        path,
+                        line_number,
+                        "Generic credential literal assigned to "
+                        f"{xml_match.group('key')}",
+                        commit,
+                    )
+                )
+
+    return list(dict.fromkeys(findings))
 
 
 def scan_tree(repository: Path) -> list[Finding]:
@@ -166,57 +319,89 @@ def commits_in_range(repository: Path, base: str, head: str) -> list[str]:
     ]
 
 
-def scan_commit(repository: Path, commit: str) -> list[Finding]:
-    patch = run_git(
-        repository,
-        "show",
-        "--format=",
-        "--no-ext-diff",
-        "--no-textconv",
-        "--unified=0",
-        "--no-renames",
-        commit,
+def commit_parents(repository: Path, commit: str) -> list[str]:
+    revision = run_git(repository, "rev-list", "--parents", "-n", "1", commit)
+    return revision.strip().split()[1:]
+
+
+def decode_git_paths(raw_paths: bytes | None) -> set[str]:
+    if not raw_paths:
+        return set()
+    return {
+        path.decode("utf-8", errors="replace")
+        for path in raw_paths.split(b"\0")
+        if path
+    }
+
+
+def changed_paths(repository: Path, parent: str | None, commit: str) -> set[str]:
+    if parent is None:
+        paths = run_git_bytes(repository, "ls-tree", "-r", "--name-only", "-z", commit)
+    else:
+        paths = run_git_bytes(
+            repository,
+            "diff",
+            "--name-only",
+            "-z",
+            "--no-renames",
+            parent,
+            commit,
+            "--",
+        )
+    return decode_git_paths(paths)
+
+
+def file_lines(repository: Path, revision: str, path: str) -> list[str] | None:
+    content = run_git_bytes(
+        repository, "show", f"{revision}:{path}", allow_failure=True
     )
+    if content is None or b"\0" in content:
+        return None
+    return content.decode("utf-8", errors="replace").splitlines()
+
+
+def added_line_indexes(before: list[str], after: list[str]) -> set[int]:
+    indexes: set[int] = set()
+    matcher = difflib.SequenceMatcher(a=before, b=after, autojunk=False)
+    for operation, _first_start, _first_end, second_start, second_end in matcher.get_opcodes():
+        if operation in {"insert", "replace"}:
+            indexes.update(range(second_start, second_end))
+    return indexes
+
+
+def scan_commit(repository: Path, commit: str) -> list[Finding]:
+    parents = commit_parents(repository, commit)
+    comparison_parents: list[str | None] = parents or [None]
+    paths: set[str] = set()
+    for parent in comparison_parents:
+        paths.update(changed_paths(repository, parent, commit))
+
     findings: list[Finding] = []
-    current_path = "unknown"
-    new_line_number: int | None = None
-
-    for patch_line in patch.splitlines():
-        if patch_line.startswith("diff --git "):
-            try:
-                parts = shlex.split(patch_line)
-                current_path = parts[3][2:] if len(parts) >= 4 else "unknown"
-            except ValueError:
-                current_path = "unknown"
-            new_line_number = None
+    for path in sorted(paths):
+        current_lines = file_lines(repository, commit, path)
+        if current_lines is None:
             continue
 
-        hunk_match = HUNK_HEADER.match(patch_line)
-        if hunk_match:
-            new_line_number = int(hunk_match.group("line"))
-            continue
-
-        if new_line_number is None:
-            continue
-        if patch_line.startswith("+++"):
-            continue
-        if patch_line.startswith("+"):
-            findings.extend(
-                inspect_line(current_path, new_line_number, patch_line[1:], commit)
+        changed_by_parent: list[set[int]] = []
+        for parent in comparison_parents:
+            parent_lines = file_lines(repository, parent, path) if parent else []
+            changed_by_parent.append(
+                added_line_indexes(parent_lines or [], current_lines)
             )
-            new_line_number += 1
-        elif patch_line.startswith("-"):
-            continue
-        else:
-            new_line_number += 1
-    return findings
+        line_indexes = set.intersection(*changed_by_parent)
+
+        for line_index in sorted(line_indexes):
+            findings.extend(
+                inspect_line(path, line_index + 1, current_lines[line_index], commit)
+            )
+    return list(dict.fromkeys(findings))
 
 
 def scan_history(repository: Path, base: str, head: str) -> list[Finding]:
     findings: list[Finding] = []
     for commit in commits_in_range(repository, base, head):
         findings.extend(scan_commit(repository, commit))
-    return findings
+    return list(dict.fromkeys(findings))
 
 
 def parse_arguments() -> argparse.Namespace:
