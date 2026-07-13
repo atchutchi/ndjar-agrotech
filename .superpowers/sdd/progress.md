@@ -21,3 +21,11 @@ Security secret prevention: complete (commits cc63723..4e0dc44, review approved 
 Production foundation Task 6: complete (commits 83eddfa..87f3b5b, review approved after redirect and UTF-8 fixes; encoding findings retracted after explicit UTF-8 verification)
 Production foundation Task 7: complete (commits ea96e77..ed6f126, review approved after semantic SQL coverage and Argon2 test stabilization; minor: remove stale parallel-timeout statement from task-7 report)
 Production foundation Task 8: complete (commits 73897cc..327d4d2, review clean after environment-contract and Next.js proxy fixes)
+
+# Final Cross-Cutting Remediation
+Started: 2026-07-13
+Trigger: independent API, mobile, data-domain and web/security reviews of commits 827fdd8..82ea27f
+API/data/domain remediation: complete (commits 121302e..6f22639; final confirmation pending)
+Mobile remediation: complete (commits 7f54b83, 1c65178 and f738b17; final review approved with minors)
+Web/security remediation: complete (commits d722450, 31463ba, bdcb2c5, 7f805df, 2ee54b6 and 17d3772; final confirmation pending)
+Exit criteria: no open Critical or Important finding, forced monorepo verification, full-tree and history secret scans, clean worktree and push to origin.

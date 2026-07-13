@@ -143,7 +143,7 @@ export function HomeScreen({
           <Text style={typography.secondary}>
             {hasDemoAccess
               ? "Módulos abertos apenas para exploração local, sem subscrição."
-              : "15.000 XOF para aceder aos módulos técnicos."}
+              : "Preço proposto: 15.000 XOF para a futura subscrição."}
           </Text>
         </View>
         <SecondaryButton

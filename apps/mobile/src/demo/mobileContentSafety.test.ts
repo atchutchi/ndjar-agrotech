@@ -54,4 +54,13 @@ describe("mobile demonstration content", () => {
     expect(forum).toContain("Resposta guardada apenas nesta sessão");
     expect(forum).not.toContain('navigate("root", undefined, "doctor")');
   });
+
+  it("labels the subscription price as a future proposal", () => {
+    const home = read("../screens/HomeScreen.tsx");
+
+    expect(home).toContain(
+      "Preço proposto: 15.000 XOF para a futura subscrição.",
+    );
+    expect(home).not.toContain("15.000 XOF para aceder aos módulos técnicos.");
+  });
 });
