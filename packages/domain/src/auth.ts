@@ -1,6 +1,7 @@
 export const NDJAR_ROLES = {
   farmer: "farmer",
   agriculturalDoctor: "agricultural_doctor",
+  medicalConsultant: "medical_consultant",
   admin: "admin",
   superAdmin: "super_admin",
 } as const;

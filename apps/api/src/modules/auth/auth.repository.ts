@@ -53,6 +53,11 @@ const roleSeed = [
     description: "Acesso de medico agricola para resposta a consultas.",
   },
   {
+    id: NDJAR_ROLES.medicalConsultant,
+    label: "Consultor Medico Agricola",
+    description: "Pode rever conteudo clinico e responder a consultas.",
+  },
+  {
     id: NDJAR_ROLES.admin,
     label: "Administrador",
     description: "Acesso administrativo ao produto NDJAR.",
@@ -130,10 +135,7 @@ export function buildRefreshTokenLockQuery(
     .from(refreshTokens)
     .for("update")
     .where(
-      and(
-        eq(refreshTokens.id, selector),
-        gt(refreshTokens.expiresAt, now),
-      ),
+      and(eq(refreshTokens.id, selector), gt(refreshTokens.expiresAt, now)),
     );
 }
 

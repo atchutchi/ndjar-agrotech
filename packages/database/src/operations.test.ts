@@ -93,4 +93,28 @@ describe("database operations", () => {
       'CREATE INDEX "auth_rate_limits_expires_at_idx"',
     );
   });
+
+  it("enforces immutable reviewed clinical versions and response snapshots", () => {
+    const migration = readFileSync(
+      resolve(
+        import.meta.dirname,
+        "../drizzle/0003_clinical_review_integrity.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain("CREATE EXTENSION IF NOT EXISTS pgcrypto");
+    expect(migration).toContain('CREATE TABLE "answer_template_versions"');
+    expect(migration).toContain("protect_answer_template_version");
+    expect(migration).toContain("validate_answer_template_version_review");
+    expect(migration).toContain("medical_consultant");
+    expect(migration).toContain("super_admin");
+    expect(migration).toContain("digest(NEW.answer_text, 'sha256')");
+    expect(migration).toContain("validate_deterministic_response_snapshot");
+    expect(migration).toContain('AND "active" = true');
+    expect(migration).toContain(
+      'NEW."answer_snapshot_hash" IS DISTINCT FROM approved."content_hash"',
+    );
+    expect(migration).toContain("prevent_agronomic_source_mutation");
+  });
 });

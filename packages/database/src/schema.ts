@@ -477,6 +477,61 @@ export const answerTemplates = pgTable(
   ],
 );
 
+export const answerTemplateVersions = pgTable(
+  "answer_template_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    answerTemplateId: text("answer_template_id")
+      .notNull()
+      .references(() => answerTemplates.id),
+    version: integer("version").notNull(),
+    triggerTerms: jsonb("trigger_terms")
+      .$type<string[]>()
+      .default([])
+      .notNull(),
+    answerText: text("answer_text").notNull(),
+    contentHash: text("content_hash").notNull(),
+    deterministicPriority: integer("deterministic_priority")
+      .default(100)
+      .notNull(),
+    active: boolean("active").default(false).notNull(),
+    reviewedByUserId: uuid("reviewed_by_user_id")
+      .notNull()
+      .references(() => users.id),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }).notNull(),
+    sourceStatus: sourceStatusEnum("source_status").notNull(),
+    sourceId: agronomicSourceColumn(),
+    ...timestampColumns(),
+  },
+  (table) => [
+    check(
+      "answer_template_versions_version_positive",
+      sql`${table.version} >= 1`,
+    ),
+    check(
+      "answer_template_versions_content_hash_format",
+      sql`${table.contentHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+    uniqueIndex("answer_template_versions_template_version_unique").on(
+      table.answerTemplateId,
+      table.version,
+    ),
+    uniqueIndex("answer_template_versions_template_hash_unique").on(
+      table.answerTemplateId,
+      table.contentHash,
+    ),
+    index("answer_template_versions_active_idx").on(
+      table.answerTemplateId,
+      table.active,
+    ),
+    uniqueIndex("answer_template_versions_one_active_unique")
+      .on(table.answerTemplateId)
+      .where(sql`${table.active}`),
+    index("answer_template_versions_reviewer_idx").on(table.reviewedByUserId),
+    index("answer_template_versions_source_idx").on(table.sourceId),
+  ],
+);
+
 export const ussdSessions = pgTable("ussd_sessions", {
   id: text("id").primaryKey(),
   userId: uuid("user_id").references(() => users.id),
@@ -532,6 +587,11 @@ export const consultationResponses = pgTable(
     answerTemplateId: text("answer_template_id").references(
       () => answerTemplates.id,
     ),
+    answerTemplateVersionId: uuid("answer_template_version_id").references(
+      () => answerTemplateVersions.id,
+    ),
+    answerSnapshot: text("answer_snapshot"),
+    answerSnapshotHash: text("answer_snapshot_hash"),
     responderUserId: uuid("responder_user_id").references(() => users.id),
     responseType: consultationResponseTypeEnum("response_type").notNull(),
     body: text("body").notNull(),
@@ -544,13 +604,20 @@ export const consultationResponses = pgTable(
   (table) => [
     check(
       "consultation_responses_template_traceability",
-      sql`${table.responseType} <> 'deterministic_template' or ${table.answerTemplateId} is not null`,
+      sql`${table.responseType} <> 'deterministic_template' or (${table.answerTemplateVersionId} is not null and ${table.answerSnapshot} is not null and ${table.answerSnapshotHash} is not null and ${table.body} = ${table.answerSnapshot})`,
+    ),
+    check(
+      "consultation_responses_snapshot_hash_format",
+      sql`${table.answerSnapshotHash} is null or ${table.answerSnapshotHash} ~ '^[0-9a-f]{64}$'`,
     ),
     check(
       "consultation_responses_doctor_traceability",
       sql`${table.responseType} <> 'doctor_response' or ${table.responderUserId} is not null`,
     ),
     index("consultation_responses_consultation_idx").on(table.consultationId),
+    index("consultation_responses_template_version_idx").on(
+      table.answerTemplateVersionId,
+    ),
     index("consultation_responses_source_id_idx").on(table.sourceId),
   ],
 );

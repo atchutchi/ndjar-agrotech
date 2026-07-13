@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   auditLogs,
   answerTemplates,
+  answerTemplateVersions,
   authAccounts,
   authRateLimits,
   calendarTasks,
@@ -39,6 +40,7 @@ describe("database schema", () => {
     expect(soilSamples).toHaveProperty("sourceStatus");
     expect(calendarTasks).toHaveProperty("sourceStatus");
     expect(answerTemplates).toHaveProperty("sourceStatus");
+    expect(answerTemplateVersions).toHaveProperty("sourceStatus");
     expect(consultationResponses).toHaveProperty("sourceStatus");
   });
 

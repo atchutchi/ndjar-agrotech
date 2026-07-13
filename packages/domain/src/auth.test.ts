@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   canAccessAdmin,
   hasEntitlement,
+  NDJAR_ROLES,
   PAID_FEATURES,
   type EntitlementSnapshot,
   type NdjarRole,
@@ -25,6 +26,10 @@ type _AdminRolesAreNdjarRoles = Assert<
 >;
 
 describe("auth domain rules", () => {
+  it("defines the persisted medical consultant reviewer role", () => {
+    expect(NDJAR_ROLES.medicalConsultant).toBe("medical_consultant");
+  });
+
   it("allows only admin and super admin into admin surfaces", () => {
     expect(canAccessAdmin(["farmer"])).toBe(false);
     expect(canAccessAdmin(["agricultural_doctor"])).toBe(false);

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   agronomicSources,
   answerTemplates,
+  answerTemplateVersions,
   calendarTasks,
   consultationResponses,
   cropAgronomicNotes,
@@ -59,17 +60,28 @@ describe("agronomic integrity", () => {
     expect(answerTemplates.sourceId.notNull).toBe(true);
   });
 
-  it("keeps clinical templates inactive until a responsible review exists", () => {
-    expect(answerTemplates.active.default).toBe(false);
-    const sql = checkSql(answerTemplates).join(" ");
-    expect(sql).toContain('"reviewed_by_user_id" is not null');
-    expect(sql).toContain('"reviewed_at" is not null');
-    expect(sql).toContain('"review_version" >= 1');
+  it("stores reviewed clinical content as versioned inactive records", () => {
+    const sql = checkSql(answerTemplateVersions).join(" ");
+    const indexes = indexedColumns(answerTemplateVersions);
+
+    expect(answerTemplateVersions.active.default).toBe(false);
+    expect(answerTemplateVersions.reviewedByUserId.notNull).toBe(true);
+    expect(answerTemplateVersions.reviewedAt.notNull).toBe(true);
+    expect(answerTemplateVersions.contentHash.notNull).toBe(true);
+    expect(answerTemplateVersions.sourceId.notNull).toBe(true);
+    expect(sql).toContain('"version" >= 1');
+    expect(sql).toContain('"content_hash"');
+    expect(indexes).toContain("answer_template_id,version");
   });
 
   it("requires traceability for deterministic and doctor responses", () => {
     const sql = checkSql(consultationResponses).join(" ");
-    expect(sql).toContain('"answer_template_id" is not null');
+    expect(sql).toContain('"answer_template_version_id" is not null');
+    expect(sql).toContain('"answer_snapshot" is not null');
+    expect(sql).toContain('"answer_snapshot_hash" is not null');
+    expect(sql).toContain(
+      '"consultation_responses"."body" = "consultation_responses"."answer_snapshot"',
+    );
     expect(sql).toContain('"responder_user_id" is not null');
     expect(consultationResponses.sourceId.notNull).toBe(true);
   });
