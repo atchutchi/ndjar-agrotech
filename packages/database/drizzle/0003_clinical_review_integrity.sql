@@ -36,6 +36,22 @@ CREATE INDEX "consultation_responses_template_version_idx" ON "consultation_resp
 INSERT INTO "roles" ("id", "label", "description") VALUES
 	('medical_consultant', 'Consultor medico agricola', 'Pode rever conteudo clinico e responder a consultas.')
 ON CONFLICT ("id") DO NOTHING;--> statement-breakpoint
+INSERT INTO "roles" ("id", "label", "description")
+SELECT DISTINCT
+	"role"::text,
+	CASE "role"::text
+		WHEN 'farmer' THEN 'Agricultor'
+		WHEN 'agricultural_doctor' THEN 'Medico Agricola'
+		WHEN 'admin' THEN 'Administrador'
+		WHEN 'super_admin' THEN 'Super Administrador'
+	END,
+	'Papel preservado durante a migracao de users.role para user_roles.'
+FROM "users"
+ON CONFLICT ("id") DO NOTHING;--> statement-breakpoint
+INSERT INTO "user_roles" ("user_id", "role_id")
+SELECT "id", "role"::text
+FROM "users"
+ON CONFLICT ("user_id", "role_id") DO NOTHING;--> statement-breakpoint
 DO $$
 BEGIN
 	IF EXISTS (
@@ -46,10 +62,10 @@ BEGIN
 			SELECT 1
 			FROM "user_roles" reviewer_role
 			WHERE reviewer_role."user_id" = template."reviewed_by_user_id"
-			AND reviewer_role."role_id" IN ('medical_consultant', 'admin', 'super_admin')
+			AND reviewer_role."role_id" IN ('agricultural_doctor', 'medical_consultant', 'admin', 'super_admin')
 		)
 	) THEN
-		RAISE EXCEPTION 'Existem templates activos sem revisor medical_consultant, admin ou super_admin.';
+		RAISE EXCEPTION 'Existem templates activos sem revisor agricola, medical_consultant, admin ou super_admin.';
 	END IF;
 END $$;--> statement-breakpoint
 INSERT INTO "answer_template_versions" (
@@ -108,13 +124,15 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-	IF NOT EXISTS (
-		SELECT 1
-		FROM "user_roles"
-		WHERE "user_id" = NEW."reviewed_by_user_id"
-		AND "role_id" IN ('medical_consultant', 'admin', 'super_admin')
-	) THEN
-		RAISE EXCEPTION 'O revisor tem de ser medical_consultant, admin ou super_admin.';
+	IF TG_OP = 'INSERT' OR NEW."active" = true THEN
+		IF NOT EXISTS (
+			SELECT 1
+			FROM "user_roles"
+			WHERE "user_id" = NEW."reviewed_by_user_id"
+			AND "role_id" IN ('agricultural_doctor', 'medical_consultant', 'admin', 'super_admin')
+		) THEN
+			RAISE EXCEPTION 'O revisor tem de ser agricultural_doctor, medical_consultant, admin ou super_admin.';
+		END IF;
 	END IF;
 
 	IF NEW."content_hash" IS DISTINCT FROM encode(digest(NEW.answer_text, 'sha256'), 'hex') THEN
@@ -174,7 +192,8 @@ BEGIN
 			RAISE EXCEPTION 'A resposta deterministica exige uma versao clinica activa e revista.';
 		END IF;
 
-		IF NEW."answer_snapshot" IS DISTINCT FROM approved."answer_text"
+		IF NEW."answer_template_id" IS DISTINCT FROM approved."answer_template_id"
+			OR NEW."answer_snapshot" IS DISTINCT FROM approved."answer_text"
 			OR NEW."answer_snapshot_hash" IS DISTINCT FROM approved."content_hash"
 			OR NEW."body" IS DISTINCT FROM approved."answer_text"
 		THEN
@@ -200,4 +219,4 @@ CREATE TRIGGER agronomic_source_immutable_guard
 BEFORE UPDATE OR DELETE ON "agronomic_sources"
 FOR EACH ROW EXECUTE FUNCTION prevent_agronomic_source_mutation();--> statement-breakpoint
 ALTER TABLE "consultation_responses" ADD CONSTRAINT "consultation_responses_snapshot_hash_format" CHECK ("consultation_responses"."answer_snapshot_hash" is null or "consultation_responses"."answer_snapshot_hash" ~ '^[0-9a-f]{64}$');--> statement-breakpoint
-ALTER TABLE "consultation_responses" ADD CONSTRAINT "consultation_responses_template_traceability" CHECK ("consultation_responses"."response_type" <> 'deterministic_template' or ("consultation_responses"."answer_template_version_id" is not null and "consultation_responses"."answer_snapshot" is not null and "consultation_responses"."answer_snapshot_hash" is not null and "consultation_responses"."body" = "consultation_responses"."answer_snapshot"));
+ALTER TABLE "consultation_responses" ADD CONSTRAINT "consultation_responses_template_traceability" CHECK ("consultation_responses"."response_type" <> 'deterministic_template' or ("consultation_responses"."answer_template_id" is not null and "consultation_responses"."answer_template_version_id" is not null and "consultation_responses"."answer_snapshot" is not null and "consultation_responses"."answer_snapshot_hash" is not null and "consultation_responses"."body" = "consultation_responses"."answer_snapshot"));

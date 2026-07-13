@@ -76,6 +76,7 @@ describe("agronomic integrity", () => {
 
   it("requires traceability for deterministic and doctor responses", () => {
     const sql = checkSql(consultationResponses).join(" ");
+    expect(sql).toContain('"answer_template_id" is not null');
     expect(sql).toContain('"answer_template_version_id" is not null');
     expect(sql).toContain('"answer_snapshot" is not null');
     expect(sql).toContain('"answer_snapshot_hash" is not null');

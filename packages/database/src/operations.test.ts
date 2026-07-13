@@ -119,6 +119,43 @@ describe("database operations", () => {
     expect(migration).toContain("prevent_agronomic_source_mutation");
   });
 
+  it("backfills legacy roles before validating clinical reviewers", () => {
+    const migration = readFileSync(
+      resolve(
+        import.meta.dirname,
+        "../drizzle/0003_clinical_review_integrity.sql",
+      ),
+      "utf8",
+    );
+    const roleBackfill = migration.indexOf('INSERT INTO "user_roles"');
+    const clinicalPreflight = migration.indexOf(
+      "Existem templates activos sem revisor",
+    );
+
+    expect(roleBackfill).toBeGreaterThanOrEqual(0);
+    expect(roleBackfill).toBeLessThan(clinicalPreflight);
+  });
+
+  it("confirms clinical role and template-version coherence incrementally", () => {
+    const migration = readFileSync(
+      resolve(
+        import.meta.dirname,
+        "../drizzle/0006_clinical_confirmation.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain(
+      "'agricultural_doctor', 'medical_consultant', 'admin', 'super_admin'",
+    );
+    expect(migration).toContain(
+      "IF TG_OP = 'INSERT' OR NEW.\"active\" = true THEN",
+    );
+    expect(migration).toContain(
+      'NEW."answer_template_id" IS DISTINCT FROM approved."answer_template_id"',
+    );
+  });
+
   it("migrates legacy roles and refresh families before enforcing constraints", () => {
     const migration = readFileSync(
       resolve(

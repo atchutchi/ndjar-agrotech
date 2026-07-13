@@ -43,6 +43,13 @@
       "when": 1783953857912,
       "tag": "0005_seed_manifests",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783956128377,
+      "tag": "0006_clinical_confirmation",
+      "breakpoints": true
     }
   ]
 }

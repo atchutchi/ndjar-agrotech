@@ -623,7 +623,7 @@ export const consultationResponses = pgTable(
   (table) => [
     check(
       "consultation_responses_template_traceability",
-      sql`${table.responseType} <> 'deterministic_template' or (${table.answerTemplateVersionId} is not null and ${table.answerSnapshot} is not null and ${table.answerSnapshotHash} is not null and ${table.body} = ${table.answerSnapshot})`,
+      sql`${table.responseType} <> 'deterministic_template' or (${table.answerTemplateId} is not null and ${table.answerTemplateVersionId} is not null and ${table.answerSnapshot} is not null and ${table.answerSnapshotHash} is not null and ${table.body} = ${table.answerSnapshot})`,
     ),
     check(
       "consultation_responses_snapshot_hash_format",
