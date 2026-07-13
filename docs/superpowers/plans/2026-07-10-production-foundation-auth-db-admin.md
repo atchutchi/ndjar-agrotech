@@ -572,10 +572,10 @@ export class AppModule {}
 Modify `.env.example`:
 
 ```env
-DATABASE_URL=postgres://ndjar:ndjar@localhost:5432/ndjar
+DATABASE_URL=
 NDJAR_DATABASE_MODE=fixture
-JWT_ACCESS_SECRET=dev-access-secret-change-before-production
-JWT_REFRESH_SECRET=dev-refresh-secret-change-before-production
+JWT_ACCESS_SECRET=
+JWT_REFRESH_SECRET=
 ADMIN_APP_URL=http://localhost:3000
 ```
 
@@ -651,6 +651,7 @@ Expected: package updated.
 Create `apps/api/src/modules/auth/auth.controller.test.ts`:
 
 ```ts
+import { randomBytes } from "node:crypto";
 import { Test } from "@nestjs/testing";
 
 import { AuthController } from "./auth.controller";
@@ -682,7 +683,7 @@ describe("AuthController", () => {
     await expect(
       controller.register({
         displayName: "Binta Cisse",
-        password: "senha-segura-123",
+        password: randomBytes(24).toString("base64url"),
         phone: "+245956086144",
       }),
     ).resolves.toEqual({
@@ -1435,10 +1436,10 @@ Add environment section:
 Production foundation environment:
 
 ```bash
-DATABASE_URL=postgres://ndjar:ndjar@localhost:5432/ndjar
+DATABASE_URL=
 NDJAR_DATABASE_MODE=fixture
-JWT_ACCESS_SECRET=dev-access-secret-change-before-production
-JWT_REFRESH_SECRET=dev-refresh-secret-change-before-production
+JWT_ACCESS_SECRET=
+JWT_REFRESH_SECRET=
 NDJAR_API_URL=http://localhost:3333
 ```
 ````
