@@ -13,3 +13,16 @@ repos:
           - Base64HighEntropyString
           - --disable-plugin
           - HexHighEntropyString
+  - repo: local
+    hooks:
+      - id: generic-credential-tree
+        name: Detect generic credential literals
+        entry: python tools/security/scan_git_history.py --tree
+        language: system
+        pass_filenames: false
+      - id: generic-credential-history
+        name: Detect generic credentials in a commit range
+        entry: python tools/security/scan_git_history.py
+        language: system
+        pass_filenames: false
+        stages: [manual]
