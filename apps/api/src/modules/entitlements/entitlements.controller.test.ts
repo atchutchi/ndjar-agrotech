@@ -94,11 +94,17 @@ describe("EntitlementsService", () => {
             active: true,
             expiresAt: new Date("2026-08-01T00:00:00.000Z"),
             featureKey: "map",
+            subscriptionExpiresAt: new Date("2026-08-01T00:00:00.000Z"),
+            subscriptionStartsAt: new Date("2026-07-01T00:00:00.000Z"),
+            subscriptionStatus: "active",
           },
           {
             active: true,
             expiresAt: null,
             featureKey: "crop_details",
+            subscriptionExpiresAt: new Date("2026-08-01T00:00:00.000Z"),
+            subscriptionStartsAt: new Date("2026-07-01T00:00:00.000Z"),
+            subscriptionStatus: "trial",
           },
         ],
         subscription: {
@@ -136,16 +142,25 @@ describe("EntitlementsService", () => {
             active: false,
             expiresAt: null,
             featureKey: "forum",
+            subscriptionExpiresAt: new Date("2026-08-01T00:00:00.000Z"),
+            subscriptionStartsAt: new Date("2026-07-01T00:00:00.000Z"),
+            subscriptionStatus: "active",
           },
           {
             active: true,
             expiresAt: new Date("2026-07-13T12:00:00.000Z"),
             featureKey: "map",
+            subscriptionExpiresAt: new Date("2026-08-01T00:00:00.000Z"),
+            subscriptionStartsAt: new Date("2026-07-01T00:00:00.000Z"),
+            subscriptionStatus: "active",
           },
           {
             active: true,
             expiresAt: null,
             featureKey: "unknown_feature",
+            subscriptionExpiresAt: new Date("2026-08-01T00:00:00.000Z"),
+            subscriptionStartsAt: new Date("2026-07-01T00:00:00.000Z"),
+            subscriptionStatus: "active",
           },
         ],
         subscription: null,
@@ -159,6 +174,61 @@ describe("EntitlementsService", () => {
       service.getCurrentUserEntitlements("user-1", now),
     ).resolves.toEqual(emptyResponse);
   });
+
+  it.each(["cancelled", "expired", "past_due"])(
+    "nao concede acesso com uma subscricao %s",
+    async (subscriptionStatus) => {
+      const repository = {
+        findForUser: vi.fn().mockResolvedValue({
+          entitlements: [
+            {
+              active: true,
+              expiresAt: null,
+              featureKey: "map",
+              subscriptionExpiresAt: new Date("2026-08-01T00:00:00.000Z"),
+              subscriptionStartsAt: new Date("2026-07-01T00:00:00.000Z"),
+              subscriptionStatus,
+            },
+          ],
+          subscription: {
+            expiresAt: new Date("2026-08-01T00:00:00.000Z"),
+            status: subscriptionStatus,
+          },
+        }),
+      };
+      const service = new EntitlementsService(
+        repository as unknown as EntitlementsRepository,
+      );
+
+      const result = await service.getCurrentUserEntitlements("user-1", now);
+
+      expect(result.features.map).toBe(false);
+    },
+  );
+
+  it("nao concede acesso fora da validade da subscricao", async () => {
+    const repository = {
+      findForUser: vi.fn().mockResolvedValue({
+        entitlements: [
+          {
+            active: true,
+            expiresAt: null,
+            featureKey: "map",
+            subscriptionExpiresAt: now,
+            subscriptionStartsAt: new Date("2026-07-01T00:00:00.000Z"),
+            subscriptionStatus: "active",
+          },
+        ],
+        subscription: null,
+      }),
+    };
+
+    const result = await new EntitlementsService(
+      repository as unknown as EntitlementsRepository,
+    ).getCurrentUserEntitlements("user-1", now);
+
+    expect(result.features.map).toBe(false);
+  });
 });
 
 describe("EntitlementsRepository", () => {
@@ -168,6 +238,9 @@ describe("EntitlementsRepository", () => {
         active: true,
         expiresAt: null,
         featureKey: "forum",
+        subscriptionExpiresAt: new Date("2026-09-01T00:00:00.000Z"),
+        subscriptionStartsAt: new Date("2026-07-01T00:00:00.000Z"),
+        subscriptionStatus: "active",
       },
     ]);
     const subscriptionWhere = vi.fn();
@@ -177,7 +250,9 @@ describe("EntitlementsRepository", () => {
       .fn()
       .mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
-          where: entitlementWhere,
+          innerJoin: vi.fn().mockReturnValue({
+            where: entitlementWhere,
+          }),
         }),
       })
       .mockReturnValueOnce({
@@ -202,6 +277,9 @@ describe("EntitlementsRepository", () => {
           active: true,
           expiresAt: null,
           featureKey: "forum",
+          subscriptionExpiresAt: new Date("2026-09-01T00:00:00.000Z"),
+          subscriptionStartsAt: new Date("2026-07-01T00:00:00.000Z"),
+          subscriptionStatus: "active",
         },
       ],
       subscription: {

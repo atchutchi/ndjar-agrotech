@@ -117,6 +117,34 @@ describe("production auth schema", () => {
     ).toBe(true);
   });
 
+  it("impede entitlements de apontarem para subscricoes de outro utilizador", () => {
+    const entitlementConfig = getTableConfig(entitlements);
+    const subscriptionConfig = getTableConfig(subscriptions);
+
+    expect(entitlements.subscriptionId.notNull).toBe(true);
+    expect(
+      subscriptionConfig.indexes.some(
+        (index) =>
+          index.config.unique &&
+          index.config.columns
+            .map((column) => ("name" in column ? column.name : undefined))
+            .join(",") === "id,user_id",
+      ),
+    ).toBe(true);
+    expect(
+      entitlementConfig.foreignKeys.some((foreignKey) => {
+        const reference = foreignKey.reference();
+        return (
+          reference.columns.map((column) => column.name).join(",") ===
+            "subscription_id,user_id" &&
+          reference.foreignColumns
+            .map((column) => column.name)
+            .join(",") === "id,user_id"
+        );
+      }),
+    ).toBe(true);
+  });
+
   it("requires metadata for payment attempts and audit logs", () => {
     expect(paymentAttempts.metadata.notNull).toBe(true);
     expect(auditLogs.metadata.notNull).toBe(true);

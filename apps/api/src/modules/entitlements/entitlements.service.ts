@@ -30,6 +30,14 @@ export class EntitlementsService {
           return [];
         }
 
+        if (
+          !["trial", "active"].includes(entitlement.subscriptionStatus) ||
+          entitlement.subscriptionStartsAt > now ||
+          entitlement.subscriptionExpiresAt <= now
+        ) {
+          return [];
+        }
+
         return [
           {
             active: entitlement.active,

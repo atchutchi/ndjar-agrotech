@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { entitlements, subscriptions } from "@ndjar/database";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 import { DATABASE } from "../database/database.module.js";
 
@@ -10,6 +10,9 @@ export interface EntitlementRecord {
   active: boolean;
   expiresAt: Date | null;
   featureKey: string;
+  subscriptionExpiresAt: Date;
+  subscriptionStartsAt: Date;
+  subscriptionStatus: string;
 }
 
 export interface SubscriptionRecord {
@@ -32,8 +35,18 @@ export class EntitlementsRepository {
           active: entitlements.active,
           expiresAt: entitlements.expiresAt,
           featureKey: entitlements.featureKey,
+          subscriptionExpiresAt: subscriptions.expiresAt,
+          subscriptionStartsAt: subscriptions.startsAt,
+          subscriptionStatus: subscriptions.status,
         })
         .from(entitlements)
+        .innerJoin(
+          subscriptions,
+          and(
+            eq(entitlements.subscriptionId, subscriptions.id),
+            eq(entitlements.userId, subscriptions.userId),
+          ),
+        )
         .where(eq(entitlements.userId, userId)),
       database
         .select({

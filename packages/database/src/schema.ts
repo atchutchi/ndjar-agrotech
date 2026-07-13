@@ -3,6 +3,7 @@ import {
   boolean,
   customType,
   doublePrecision,
+  foreignKey,
   integer,
   index,
   jsonb,
@@ -566,20 +567,32 @@ export const plans = pgTable("plans", {
   ...timestampColumns(),
 });
 
-export const subscriptions = pgTable("subscriptions", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id),
-  planId: text("plan_id")
-    .notNull()
-    .references(() => plans.id),
-  status: subscriptionStatusEnum("status").default("active").notNull(),
-  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
-  ...timestampColumns(),
-});
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    planId: text("plan_id")
+      .notNull()
+      .references(() => plans.id),
+    status: subscriptionStatusEnum("status").default("active").notNull(),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    ...timestampColumns(),
+  },
+  (table) => [
+    uniqueIndex("subscriptions_id_user_id_unique").on(table.id, table.userId),
+    index("subscriptions_user_status_validity_idx").on(
+      table.userId,
+      table.status,
+      table.startsAt,
+      table.expiresAt,
+    ),
+  ],
+);
 
 export const paymentProviders = pgTable("payment_providers", {
   id: text("id").primaryKey(),
@@ -610,17 +623,32 @@ export const paymentAttempts = pgTable("payment_attempts", {
   ...timestampColumns(),
 });
 
-export const entitlements = pgTable("entitlements", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id),
-  subscriptionId: uuid("subscription_id").references(() => subscriptions.id),
-  featureKey: text("feature_key").notNull(),
-  active: boolean("active").default(true).notNull(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }),
-  ...timestampColumns(),
-});
+export const entitlements = pgTable(
+  "entitlements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    subscriptionId: uuid("subscription_id").notNull(),
+    featureKey: text("feature_key").notNull(),
+    active: boolean("active").default(true).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    ...timestampColumns(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.subscriptionId, table.userId],
+      foreignColumns: [subscriptions.id, subscriptions.userId],
+      name: "entitlements_subscription_user_fk",
+    }),
+    uniqueIndex("entitlements_subscription_feature_unique").on(
+      table.subscriptionId,
+      table.featureKey,
+    ),
+    index("entitlements_user_active_idx").on(table.userId, table.active),
+  ],
+);
 
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").defaultRandom().primaryKey(),
