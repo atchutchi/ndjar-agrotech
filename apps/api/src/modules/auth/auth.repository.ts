@@ -244,11 +244,13 @@ export class AuthRepository {
 
   async createRefreshToken(userId: string): Promise<string> {
     const token = newRefreshTokenParts();
+    const familyId = randomUUID();
 
     await this.requireDatabase()
       .insert(refreshTokens)
       .values({
         id: token.selector,
+        familyId,
         userId,
         tokenHash: await hash(token.secret),
         expiresAt: expiresInDays(30),
@@ -270,11 +272,14 @@ export class AuthRepository {
       const now = new Date();
       const rows = await tx
         .select({
+          consumedAt: refreshTokens.consumedAt,
           displayName: users.displayName,
+          familyId: refreshTokens.familyId,
           id: users.id,
           passwordHash: authAccounts.passwordHash,
           refreshTokenHash: refreshTokens.tokenHash,
           refreshTokenId: refreshTokens.id,
+          revokedAt: refreshTokens.revokedAt,
           roleId: roles.id,
           verifiedAt: userProfiles.verifiedAt,
         })
@@ -294,7 +299,6 @@ export class AuthRepository {
         .where(
           and(
             eq(refreshTokens.id, parsedToken.selector),
-            isNull(refreshTokens.revokedAt),
             gt(refreshTokens.expiresAt, now),
             eq(users.isActive, true),
             isNotNull(userProfiles.verifiedAt),
@@ -309,12 +313,30 @@ export class AuthRepository {
         return null;
       }
 
+      if (firstRow.consumedAt) {
+        await tx
+          .update(refreshTokens)
+          .set({ revokedAt: now })
+          .where(
+            and(
+              eq(refreshTokens.familyId, firstRow.familyId),
+              isNull(refreshTokens.revokedAt),
+            ),
+          );
+        return null;
+      }
+
+      if (firstRow.revokedAt) {
+        return null;
+      }
+
       const [claimedToken] = await tx
         .update(refreshTokens)
-        .set({ revokedAt: now })
+        .set({ consumedAt: now, revokedAt: now })
         .where(
           and(
             eq(refreshTokens.id, parsedToken.selector),
+            isNull(refreshTokens.consumedAt),
             isNull(refreshTokens.revokedAt),
             gt(refreshTokens.expiresAt, now),
           ),
@@ -322,6 +344,15 @@ export class AuthRepository {
         .returning({ id: refreshTokens.id });
 
       if (!claimedToken) {
+        await tx
+          .update(refreshTokens)
+          .set({ revokedAt: now })
+          .where(
+            and(
+              eq(refreshTokens.familyId, firstRow.familyId),
+              isNull(refreshTokens.revokedAt),
+            ),
+          );
         return null;
       }
 
@@ -333,6 +364,8 @@ export class AuthRepository {
       const nextRefreshToken = newRefreshTokenParts();
       await tx.insert(refreshTokens).values({
         id: nextRefreshToken.selector,
+        familyId: firstRow.familyId,
+        parentTokenId: firstRow.refreshTokenId,
         userId: user.id,
         tokenHash: await hash(nextRefreshToken.secret),
         expiresAt: expiresInDays(30),
@@ -470,6 +503,10 @@ export class AuthRepository {
 
     await this.requireDatabase().transaction(async (tx) => {
       const now = new Date();
+
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${input.identifierHash}, 0))`,
+      );
 
       await tx
         .update(verificationCodes)

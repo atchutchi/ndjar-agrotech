@@ -34,6 +34,13 @@ function verificationCode() {
   return String(randomInt(100000, 999999));
 }
 
+function exposeAuthCodes() {
+  return (
+    process.env.NDJAR_EXPOSE_AUTH_CODES === "true" &&
+    process.env.NODE_ENV !== "production"
+  );
+}
+
 function isUniqueViolation(error: unknown) {
   return (
     typeof error === "object" &&
@@ -73,8 +80,7 @@ export class AuthService {
     }
 
     return {
-      devVerificationCode:
-        process.env.NODE_ENV === "production" ? undefined : code,
+      ...(exposeAuthCodes() ? { devVerificationCode: code } : {}),
       userId: result.userId,
       verificationRequired: true,
     };
@@ -135,7 +141,7 @@ export class AuthService {
     });
 
     return {
-      devResetCode: process.env.NODE_ENV === "production" ? undefined : code,
+      ...(exposeAuthCodes() ? { devResetCode: code } : {}),
       resetRequired: true,
     };
   }

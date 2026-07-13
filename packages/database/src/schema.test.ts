@@ -102,6 +102,21 @@ describe("production auth schema", () => {
     ).toBe(true);
   });
 
+  it("persiste familias e cadeia de rotacao dos refresh tokens", () => {
+    const config = getTableConfig(refreshTokens);
+
+    expect(refreshTokens).toHaveProperty("familyId");
+    expect(refreshTokens).toHaveProperty("parentTokenId");
+    expect(refreshTokens).toHaveProperty("consumedAt");
+    expect(
+      config.indexes.some((index) =>
+        index.config.columns.some(
+          (column) => "name" in column && column.name === "family_id",
+        ),
+      ),
+    ).toBe(true);
+  });
+
   it("requires metadata for payment attempts and audit logs", () => {
     expect(paymentAttempts.metadata.notNull).toBe(true);
     expect(auditLogs.metadata.notNull).toBe(true);

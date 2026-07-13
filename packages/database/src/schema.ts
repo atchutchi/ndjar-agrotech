@@ -4,6 +4,7 @@ import {
   customType,
   doublePrecision,
   integer,
+  index,
   jsonb,
   pgEnum,
   pgTable,
@@ -514,12 +515,18 @@ export const refreshTokens = pgTable("refresh_tokens", {
     .notNull()
     .references(() => users.id),
   tokenHash: text("token_hash").notNull(),
+  familyId: uuid("family_id").notNull(),
+  parentTokenId: uuid("parent_token_id"),
   userAgent: text("user_agent"),
   ipHash: text("ip_hash"),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
   ...timestampColumns(),
-});
+}, (table) => [
+  index("refresh_tokens_family_id_idx").on(table.familyId),
+  index("refresh_tokens_user_id_idx").on(table.userId),
+]);
 
 export const roles = pgTable("roles", {
   id: text("id").primaryKey(),

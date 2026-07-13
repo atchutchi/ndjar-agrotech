@@ -27,6 +27,42 @@ describe("AuthService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.JWT_ACCESS_SECRET = randomBytes(48).toString("base64url");
+    delete process.env.NDJAR_EXPOSE_AUTH_CODES;
+  });
+
+  it("oculta codigos de verificacao por defeito", async () => {
+    repository.createFarmerAccount.mockResolvedValue({ userId: "user-1" });
+
+    await expect(
+      createService().register({
+        displayName: "Binta Cisse",
+        password: testPassword,
+        phone: "+245956086144",
+      }),
+    ).resolves.not.toHaveProperty("devVerificationCode");
+  });
+
+  it("expoe codigos apenas com a flag explicita de desenvolvimento", async () => {
+    process.env.NDJAR_EXPOSE_AUTH_CODES = "true";
+    repository.createFarmerAccount.mockResolvedValue({ userId: "user-1" });
+
+    await expect(
+      createService().register({
+        displayName: "Binta Cisse",
+        password: testPassword,
+        phone: "+245956086144",
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({ devVerificationCode: expect.any(String) }),
+    );
+  });
+
+  it("oculta codigos de recuperacao por defeito", async () => {
+    repository.createPasswordResetCode.mockResolvedValue(undefined);
+
+    await expect(
+      createService().forgotPassword({ identifier: "+245956086144" }),
+    ).resolves.not.toHaveProperty("devResetCode");
   });
 
   it("persiste o email opcional durante o registo", async () => {

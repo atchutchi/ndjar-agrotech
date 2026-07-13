@@ -183,6 +183,39 @@ describe("AuthRepository refresh tokens", () => {
     expect(update.where).not.toHaveBeenCalled();
     expect(insert.values).not.toHaveBeenCalled();
   });
+
+  it("revoga toda a familia quando um token consumido e reutilizado", async () => {
+    const familyId = "11111111-1111-4111-8111-111111111111";
+    const select = selectChain([
+      {
+        consumedAt: new Date("2026-07-13T12:00:00Z"),
+        displayName: "Binta Cisse",
+        familyId,
+        id: "user-1",
+        passwordHash: await testHash(randomBytes(32).toString("base64url")),
+        refreshTokenHash: await testHash(validRefreshTokenSecret),
+        refreshTokenId: validRefreshTokenSelector,
+        revokedAt: new Date("2026-07-13T12:00:00Z"),
+        roleId: "farmer",
+        verifiedAt: new Date("2026-07-13T10:00:00Z"),
+      },
+    ]);
+    const revokeFamily = mutationChain([{ id: validRefreshTokenSelector }]);
+    const tx = {
+      insert: vi.fn(),
+      select: vi.fn(() => select),
+      update: vi.fn(() => revokeFamily),
+    };
+
+    await expect(
+      repositoryWithTransaction(tx).rotateRefreshToken(validRefreshToken),
+    ).resolves.toBeNull();
+
+    expect(revokeFamily.set).toHaveBeenCalledWith({
+      revokedAt: expect.any(Date),
+    });
+    expect(tx.insert).not.toHaveBeenCalled();
+  });
 });
 
 describe("AuthRepository verification codes", () => {
@@ -225,9 +258,11 @@ describe("AuthRepository verification codes", () => {
   it("invalida resets anteriores antes de emitir novo codigo", async () => {
     const update = mutationChain([{ id: "old-code" }]);
     const insert = mutationChain([]);
+    const execute = vi.fn().mockResolvedValue([]);
     const repository = new AuthRepository({
       transaction: (callback: (value: unknown) => unknown) =>
         callback({
+          execute,
           insert: vi.fn(() => insert),
           update: vi.fn(() => update),
         }),
@@ -248,6 +283,10 @@ describe("AuthRepository verification codes", () => {
     expect(update.set).toHaveBeenCalledWith({
       consumedAt: expect.any(Date),
     });
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(execute.mock.invocationCallOrder[0]).toBeLessThan(
+      update.set.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+    );
     expect(insert.values).toHaveBeenCalledWith(
       expect.objectContaining({
         purpose: "password_reset",
