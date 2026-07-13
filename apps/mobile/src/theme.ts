@@ -1,4 +1,4 @@
-import { Platform, StatusBar, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
 export const colors = {
   brandDark: "#092E1B",
@@ -29,9 +29,6 @@ export const spacing = {
   xl: 24,
   xxl: 32,
 };
-
-const androidTopInset =
-  Platform.OS === "android" ? (StatusBar.currentHeight ?? 0) : 0;
 
 export const typography = StyleSheet.create({
   eyebrow: {
@@ -76,8 +73,8 @@ export const commonStyles = StyleSheet.create({
   content: {
     gap: spacing.lg,
     padding: spacing.lg,
-    paddingBottom: 148,
-    paddingTop: androidTopInset + spacing.xl,
+    paddingBottom: spacing.xl,
+    paddingTop: spacing.lg,
   },
   card: {
     backgroundColor: colors.surface,

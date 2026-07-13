@@ -8,10 +8,10 @@ export type TabId = "home" | "map" | "doctor" | "forum" | "profile";
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
 const tabs: { id: TabId; label: string; icon: IconName }[] = [
-  { id: "home", label: "Inicio", icon: "home-variant-outline" },
+  { id: "home", label: "Início", icon: "home-variant-outline" },
   { id: "map", label: "Mapa", icon: "map-marker-radius-outline" },
   { id: "doctor", label: "Médico", icon: "stethoscope" },
-  { id: "forum", label: "Forum", icon: "forum-outline" },
+  { id: "forum", label: "Fórum", icon: "forum-outline" },
   { id: "profile", label: "Perfil", icon: "account-outline" },
 ];
 
@@ -61,18 +61,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderTopWidth: 1,
-    bottom: 0,
     elevation: 14,
     flexDirection: "row",
     gap: spacing.xs,
     justifyContent: "space-between",
-    left: 0,
-    minHeight: 78,
-    paddingBottom: 10,
+    minHeight: 72,
+    paddingBottom: spacing.sm,
     paddingHorizontal: spacing.sm,
     paddingTop: spacing.sm,
-    position: "absolute",
-    right: 0,
     shadowColor: colors.shadow,
     shadowOffset: { height: -6, width: 0 },
     shadowOpacity: 0.08,

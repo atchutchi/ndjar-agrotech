@@ -12,6 +12,10 @@ import {
   ScreenHeader,
   SecondaryButton,
 } from "../components/ui";
+import {
+  createDoctorDraftResult,
+  TEMPORARY_DRAFT_NOTICE,
+} from "../demo/demoSafety";
 import type { PilotSnapshot } from "../storage/offlineStore";
 import { offlineStore } from "../storage/offlineStore";
 import { colors, commonStyles, spacing, typography } from "../theme";
@@ -36,7 +40,6 @@ export function DoctorScreen({
 }) {
   const [question, setQuestion] = useState("");
   const [result, setResult] = useState<string | null>(null);
-  const [ticket, setTicket] = useState<string | null>(null);
 
   useEffect(() => {
     offlineStore.getDraft("doctor-question").then(setQuestion);
@@ -48,7 +51,6 @@ export function DoctorScreen({
 
   function updateQuestion(value: string) {
     setQuestion(value);
-    setTicket(null);
     void offlineStore.saveDraft("doctor-question", value);
   }
 
@@ -61,7 +63,6 @@ export function DoctorScreen({
       setResult(
         "Escreve a pergunta com cultura, comunidade e sinal observado.",
       );
-      setTicket(null);
       return;
     }
 
@@ -72,15 +73,11 @@ export function DoctorScreen({
     });
 
     if (localResult.decision.shouldEscalate) {
-      setResult(
-        "Escalar para consultor em 24h. A app não deve dar dose, mistura, produto ou prazo de colheita sem revisão.",
-      );
-      setTicket(`NDJ-${Date.now().toString().slice(-5)}`);
+      setResult(createDoctorDraftResult().message);
       return;
     }
 
-    setResult(localResult.answer ?? "Escalar para consultor em 24h.");
-    setTicket(null);
+    setResult(localResult.answer ?? createDoctorDraftResult().message);
   }
 
   return (
@@ -88,19 +85,19 @@ export function DoctorScreen({
       <ScreenHeader
         onBack={canGoBack ? onBack : undefined}
         title="Médico Agrícola"
-        subtitle="Triagem local com resposta segura e encaminhamento para consultor."
+        subtitle="Triagem educativa local. Esta demonstração não envia pedidos a consultores."
       />
 
       <PhotoCard
         image={agriHero}
-        subtitle="A IA responde só ao que está aprovado. Casos de risco seguem para agrónomo."
+        subtitle="A análise usa apenas textos locais de demonstração. Casos de risco ficam como rascunho temporário."
         title="Consulta no campo"
       >
         <View style={{ flexDirection: "row", gap: spacing.sm }}>
           <View style={{ flex: 1 }}>
             <PrimaryButton
               icon="message-processing-outline"
-              label="Verificar"
+              label="Analisar localmente"
               onPress={() => submitQuestion()}
             />
           </View>
@@ -119,13 +116,11 @@ export function DoctorScreen({
           <View style={{ gap: spacing.md }}>
             <Text style={typography.sectionTitle}>Resultado</Text>
             <Text style={typography.body}>{result}</Text>
-            {ticket ? (
-              <ListItem
-                icon="clipboard-text-clock-outline"
-                meta="Pedido criado localmente para parecer do consultor."
-                title={`Ticket ${ticket}`}
-              />
-            ) : null}
+            <ListItem
+              icon="content-save-alert-outline"
+              meta={TEMPORARY_DRAFT_NOTICE}
+              title="Não enviado"
+            />
           </View>
         </Card>
       ) : null}
@@ -134,7 +129,7 @@ export function DoctorScreen({
         <View style={{ gap: spacing.md }}>
           <View style={{ flexDirection: "row", gap: spacing.sm }}>
             <Chip label="Resposta local" />
-            <Chip label="24h consultor" tone="warning" />
+            <Chip label="Sem envio" tone="warning" />
           </View>
           <Text style={typography.sectionTitle}>Perguntas rápidas</Text>
           {quickQuestions.map((item) => (
@@ -170,7 +165,7 @@ export function DoctorScreen({
           />
           <PrimaryButton
             icon="shield-check-outline"
-            label="Verificar pergunta"
+            label="Analisar pergunta localmente"
             onPress={() => submitQuestion()}
           />
         </View>

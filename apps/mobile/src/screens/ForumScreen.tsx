@@ -10,6 +10,7 @@ import {
   PrimaryButton,
   ScreenHeader,
 } from "../components/ui";
+import { TEMPORARY_DRAFT_NOTICE } from "../demo/demoSafety";
 import type { PilotSnapshot } from "../storage/offlineStore";
 import { offlineStore } from "../storage/offlineStore";
 import { colors, commonStyles, spacing, typography } from "../theme";
@@ -17,7 +18,7 @@ import { colors, commonStyles, spacing, typography } from "../theme";
 const forumTopics = [
   {
     id: "mandioca-quinara",
-    title: "Mandioca nao cresce em Quinara",
+    title: "Mandioca não cresce em Quinara",
     meta: "12 respostas, pH e solo",
     tone: "primary" as const,
     answer:
@@ -26,7 +27,7 @@ const forumTopics = [
   {
     id: "arroz-sequeiro",
     title: "Quando plantar arroz de sequeiro?",
-    meta: "8 respostas, calendario",
+    meta: "8 respostas, calendário",
     tone: "warning" as const,
     answer:
       "A janela depende da chuva local. No MVP usamos o calendário do sul como referência e marcamos alerta para validação.",
@@ -42,7 +43,7 @@ const forumTopics = [
   {
     id: "mercado-bafata",
     title: "Partilha: mercado de Bafata",
-    meta: "22 comentarios, precos",
+    meta: "22 comentários, preços",
     tone: "soil" as const,
     answer:
       "Funcionalidade futura: recolher preço, data, mercado e fonte antes de mostrar tendências.",
@@ -143,10 +144,10 @@ export function ForumScreen({
               : "Piloto local a carregar."}
           </Text>
           <TextInput
-            accessibilityLabel="Rascunho de pergunta para o forum"
+            accessibilityLabel="Rascunho de pergunta para o fórum"
             multiline
             onChangeText={updateDraft}
-            placeholder="Ex.: Qual a melhor epoca para arroz?"
+            placeholder="Ex.: Qual a melhor época para arroz?"
             placeholderTextColor={colors.textSecondary}
             style={[
               commonStyles.input,
@@ -157,7 +158,7 @@ export function ForumScreen({
           <PrimaryButton
             icon="content-save-outline"
             label="Guardar rascunho"
-            onPress={() => setSavedMessage("Rascunho guardado offline.")}
+            onPress={() => setSavedMessage(TEMPORARY_DRAFT_NOTICE)}
           />
           {savedMessage ? (
             <Text

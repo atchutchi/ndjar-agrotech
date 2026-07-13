@@ -10,17 +10,17 @@ const LOCAL_SAFE_TEMPLATES: LocalAnswerTemplate[] = [
   {
     id: "soil-ph-basic",
     triggerTerms: ["ph", "solo"],
-    body: "Um pH perto de 6 costuma ser favoravel para muitas culturas. No piloto N'djar, este dado e apenas exemplo local e deve ser confirmado por observacao ou analise.",
+    body: "Um pH perto de 6 costuma ser favorável para muitas culturas. No piloto N'djar, este dado é apenas um exemplo local e deve ser confirmado por observação ou análise.",
   },
   {
     id: "calendar-basic",
     triggerTerms: ["calendario", "plantar"],
-    body: "Para o piloto, consulta o calendario local por mes e confirma a fase da cultura antes de agir. A app nao recomenda doses nem produtos.",
+    body: "Para o piloto, consulta o calendário local por mês e confirma a fase da cultura antes de agir. A app não recomenda doses nem produtos.",
   },
   {
     id: "crop-list-basic",
     triggerTerms: ["culturas", "comunidade"],
-    body: "A lista piloto mostra as culturas observadas por comunidade e mantem o estado da fonte em cada registo.",
+    body: "A lista piloto mostra as culturas observadas por comunidade e mantém o estado da fonte em cada registo.",
   },
 ] as const;
 
@@ -51,7 +51,6 @@ export function evaluateLocalDoctorQuestion(input: LocalDoctorQuestionInput) {
   const template = findReviewedTemplate(input.question);
   const decision = shouldEscalateQuestion({
     cropId: input.cropId,
-    hasReviewedAnswer: template !== null,
     language: "pt",
     regionId: input.regionId,
     text: input.question,

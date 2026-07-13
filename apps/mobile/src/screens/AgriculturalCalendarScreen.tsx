@@ -92,7 +92,9 @@ export function AgriculturalCalendarScreen({ onBack }: { onBack: () => void }) {
 
       <Card>
         <View style={{ gap: spacing.md }}>
-          <Text style={typography.sectionTitle}>Agora neste mês</Text>
+          <Text style={typography.sectionTitle}>
+            Actividades de referência neste mês
+          </Text>
           {activeTasks.length > 0 ? (
             activeTasks.map((task) => (
               <View
@@ -109,6 +111,9 @@ export function AgriculturalCalendarScreen({ onBack }: { onBack: () => void }) {
                   <Text style={typography.label}>{task.phase.label}</Text>
                   <Text style={typography.secondary}>
                     {task.group.title}: {task.group.crops.join(", ")}
+                  </Text>
+                  <Text style={typography.secondary}>
+                    Fonte: {task.group.sourceLabel}
                   </Text>
                 </View>
               </View>
@@ -159,6 +164,10 @@ export function AgriculturalCalendarScreen({ onBack }: { onBack: () => void }) {
             <Text style={typography.secondary}>
               {selectedGroup.crops.join(", ")}
             </Text>
+            <Text style={typography.secondary}>
+              Fonte: {selectedGroup.sourceLabel}, folha do calendário agrícola
+              fornecido ao projecto.
+            </Text>
           </View>
 
           <View style={styles.monthGrid}>
@@ -207,13 +216,14 @@ export function AgriculturalCalendarScreen({ onBack }: { onBack: () => void }) {
 
           {selectedGroupActivePhases.length > 0 ? (
             <View style={styles.actionBox}>
-              <Text style={styles.actionTitle}>Acção recomendada agora</Text>
+              <Text style={styles.actionTitle}>Actividade de referência</Text>
               <Text style={typography.body}>
-                Em {selectedMonth.label}, acompanha{" "}
+                O ficheiro de origem marca, em {selectedMonth.label},{" "}
                 {selectedGroupActivePhases
                   .map((phase) => phase.label.toLowerCase())
                   .join(" e ")}{" "}
-                para {selectedGroup.title.toLowerCase()}.
+                para {selectedGroup.title.toLowerCase()}. Confirma no terreno
+                antes de planear a actividade.
               </Text>
             </View>
           ) : (

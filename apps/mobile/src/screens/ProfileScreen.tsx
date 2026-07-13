@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
 import type { Navigate } from "../App";
@@ -24,7 +23,6 @@ export function ProfileScreen({
   onBack: () => void;
   canGoBack: boolean;
 }) {
-  const [syncState, setSyncState] = useState("Offline activo");
   const parcelCount = snapshot?.communities.reduce(
     (total, community) =>
       total + Math.round(community.areaHectares / community.parcelSizeHectares),
@@ -62,7 +60,7 @@ export function ProfileScreen({
               <Text style={typography.secondary}>Agricultora, Quinara</Text>
               <View style={{ flexDirection: "row", gap: spacing.sm }}>
                 <Chip label="Português" />
-                <Chip label={syncState} tone="community" />
+                <Chip label="Demonstração local" tone="community" />
               </View>
             </View>
           </View>
@@ -78,9 +76,8 @@ export function ProfileScreen({
           />
           <ListItem
             icon="database-check-outline"
-            meta="Dados piloto carregados localmente para teste offline."
+            meta="Dados de exemplo incluídos na aplicação. Não existe sincronização com servidor."
             title="Dados locais"
-            onPress={() => setSyncState("Dados verificados")}
           />
           <ListItem
             icon="texture-box"
@@ -103,15 +100,17 @@ export function ProfileScreen({
             <View style={{ flex: 1 }}>
               <SecondaryButton
                 icon="sync"
-                label="Sincronizar"
-                onPress={() => setSyncState("Sincronizado agora")}
+                label="Sem sincronização"
+                disabled
+                onPress={() => undefined}
               />
             </View>
             <View style={{ flex: 1 }}>
               <PrimaryButton
                 icon="logout"
-                label="Sair"
-                onPress={() => setSyncState("Sessão local")}
+                label="Sem sessão iniciada"
+                disabled
+                onPress={() => undefined}
               />
             </View>
           </View>

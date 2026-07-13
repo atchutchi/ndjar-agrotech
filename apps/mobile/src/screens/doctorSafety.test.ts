@@ -19,7 +19,7 @@ describe("evaluateLocalDoctorQuestion", () => {
     });
   });
 
-  it("answers a safe pH question when an explicit reviewed template matches", () => {
+  it("does not answer a pH question without traceable medical review", () => {
     expect(
       evaluateLocalDoctorQuestion({
         cropId: "mandioca",
@@ -27,12 +27,12 @@ describe("evaluateLocalDoctorQuestion", () => {
         regionId: "quinara-buba",
       }),
     ).toMatchObject({
-      answer: expect.stringContaining("pH"),
+      answer: null,
       decision: {
-        reason: "reviewed_answer_available",
-        shouldEscalate: false,
+        reason: "no_safe_answer",
+        shouldEscalate: true,
       },
-      templateId: "soil-ph-basic",
+      templateId: null,
     });
   });
 });

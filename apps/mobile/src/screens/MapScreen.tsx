@@ -95,7 +95,6 @@ export function MapScreen({
 }) {
   const [selectedCommunityId, setSelectedCommunityId] =
     useState("sare-donha-1");
-  const [samplePhotoCount, setSamplePhotoCount] = useState(0);
   const selectedCommunity = snapshot?.communities.find(
     (community) => community.id === selectedCommunityId,
   );
@@ -117,7 +116,7 @@ export function MapScreen({
       <ScrollView contentContainerStyle={commonStyles.content}>
         <ScreenHeader
           onBack={onBack}
-          subtitle="Registo funcional para recolher dados e pedir validação."
+          subtitle="Fluxo de referência. A câmara e o envio ainda não estão ligados."
           title="Amostra de solo"
         />
         <Card>
@@ -129,27 +128,24 @@ export function MapScreen({
             />
             <ListItem
               icon="numeric-2-circle-outline"
-              meta="Recolher amostra composta e guardar fotografia."
+              meta="Recolher amostra composta. A fotografia ainda não está disponível."
               title="Recolher amostra"
             />
             <ListItem
               icon="numeric-3-circle-outline"
-              meta="Enviar para laboratório ou técnico responsável."
+              meta="O envio para laboratório ou técnico será ligado numa versão futura."
               title="Validar pH"
             />
-            {samplePhotoCount > 0 ? (
-              <ListItem
-                icon="image-check-outline"
-                meta={`${samplePhotoCount} fotografia${
-                  samplePhotoCount > 1 ? "s" : ""
-                } guardada${samplePhotoCount > 1 ? "s" : ""} localmente para teste.`}
-                title="Fotografias adicionadas"
-              />
-            ) : null}
-            <PrimaryButton
+            <ListItem
+              icon="camera-off-outline"
+              meta="A câmara e o armazenamento de fotografias ainda não estão ligados nesta demonstração."
+              title="Fotografia indisponível"
+            />
+            <SecondaryButton
               icon="camera-plus-outline"
-              label="Adicionar fotografias"
-              onPress={() => setSamplePhotoCount((count) => count + 1)}
+              label="Fotografia indisponível"
+              disabled
+              onPress={() => undefined}
             />
           </View>
         </Card>
@@ -163,7 +159,7 @@ export function MapScreen({
         <ScrollView contentContainerStyle={commonStyles.content}>
           <ScreenHeader
             onBack={onBack}
-            subtitle="Escolhe uma cultura para ver pH de referência, compatibilidade regional e próxima acção."
+            subtitle="Escolhe uma cultura para consultar referências ilustrativas ainda por validar."
             title="Informações do cultivo"
           />
           <Card>
@@ -197,7 +193,7 @@ export function MapScreen({
       <ScrollView contentContainerStyle={commonStyles.content}>
         <ScreenHeader
           onBack={onBack}
-          subtitle="Ficha agrícola com compatibilidade regional e acção segura."
+          subtitle="Ficha ilustrativa. Os intervalos de pH ainda precisam de validação agronómica."
           title={selectedCrop?.label ?? "Cultivo"}
         />
         <Card>
@@ -217,28 +213,12 @@ export function MapScreen({
                 </Text>
               </View>
             </View>
-            {["Bafatá", "Tombali", "Cacheu", "Quinara"].map((region, index) => (
-              <View key={region} style={{ gap: spacing.xs }}>
-                <View style={styles.timelineRow}>
-                  <Text style={typography.label}>{region}</Text>
-                  <Text style={typography.secondary}>
-                    {[80, 78, 55, 20][index]}%
-                  </Text>
-                </View>
-                <View style={styles.timelineTrack}>
-                  <View
-                    style={[
-                      styles.timelineFill,
-                      {
-                        backgroundColor:
-                          index === 3 ? colors.danger : colors.brandPrimary,
-                        width: `${[80, 78, 55, 20][index]}%`,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-            ))}
+            <Chip label="Dados ilustrativos" tone="warning" />
+            <Text style={typography.body}>
+              O intervalo apresentado é uma referência de demonstração e não
+              representa uma avaliação regional. A aptidão depende de amostra,
+              solo, água, drenagem, cultura e validação técnica.
+            </Text>
             <PrimaryButton
               icon="stethoscope"
               label="Pedir orientação ao Médico Agrícola"
@@ -253,9 +233,9 @@ export function MapScreen({
   return (
     <ScrollView contentContainerStyle={commonStyles.content}>
       <ScreenHeader
-        action={<Chip label="Satélite" tone="community" />}
+        action={<Chip label="Esquema local" tone="community" />}
         onBack={canGoBack ? onBack : undefined}
-        subtitle="Selecciona uma zona para ver solo, aptidão e uso possível."
+        subtitle="Selecciona um ponto ilustrativo para explorar os dados do diagnóstico piloto."
         title="Mapa agrícola"
       />
 
@@ -318,31 +298,31 @@ export function MapScreen({
         <View style={{ gap: spacing.md }}>
           <View style={{ flexDirection: "row", gap: spacing.sm }}>
             <Chip label="Pontos estimados" tone="warning" />
-            <Chip label="Mapa interactivo" />
+            <Chip label="Esquema interactivo" />
           </View>
           <Text style={typography.sectionTitle}>
             {selectedCommunity?.name ?? "Comunidade"}
           </Text>
           <Text style={typography.body}>
             {selectedCommunity
-              ? `${selectedCommunity.areaHectares} ha estimados, parcelas de ${selectedCommunity.parcelSizeHectares} ha, produção orgânica sem uso químico reportado.`
+              ? `${selectedCommunity.areaHectares} ha estimados e parcelas de ${selectedCommunity.parcelSizeHectares} ha no levantamento piloto. O uso químico não reportado não comprova produção orgânica.`
               : "Selecciona uma comunidade no mapa."}
           </Text>
           <View style={{ gap: spacing.sm }}>
             <ListItem
               icon="terrain"
-              meta="Solo ácido a validar. Confirmar pH, matéria orgânica e drenagem antes de recomendar."
-              title="Tipo de solo"
+              meta="Exemplo do diagnóstico piloto. O tipo de solo e o pH exigem confirmação no terreno e em laboratório."
+              title="Solo por validar"
             />
             <ListItem
               icon="grass"
-              meta="Possível apenas com validação de água, acesso e pressão animal."
-              title="Pastagem animal"
+              meta="Sem avaliação técnica validada para este ponto da demonstração."
+              title="Pastagem não avaliada"
             />
             <ListItem
               icon="leaf-circle-outline"
-              meta="Conservação do solo melhora água, fertilidade e actividade biológica."
-              title="Manejo recomendado"
+              meta="Conteúdo educativo geral. Não substitui uma recomendação para a parcela."
+              title="Princípio de conservação"
             />
           </View>
           <View style={{ flexDirection: "row", gap: spacing.sm }}>

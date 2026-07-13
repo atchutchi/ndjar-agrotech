@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Image,
   ImageBackground,
@@ -29,6 +30,7 @@ import {
   ScreenHeader,
   SecondaryButton,
 } from "../components/ui";
+import { DEMO_ACCESS_LABEL, DEMO_PAYMENT_NOTICE } from "../demo/demoSafety";
 import type { TabId } from "../navigation/tabs";
 import type { PilotSnapshot } from "../storage/offlineStore";
 import { colors, commonStyles, spacing, typography } from "../theme";
@@ -40,23 +42,25 @@ export function HomeScreen({
   onOpenTab,
   navigate,
   route,
-  hasSubscription,
-  activateSubscription,
+  hasDemoAccess,
+  enableDemoAccess,
   onBack,
 }: {
   snapshot: PilotSnapshot | null;
   onOpenTab: (tabId: TabId) => void;
   navigate: Navigate;
   route: AppRoute;
-  hasSubscription: boolean;
-  activateSubscription: () => void;
+  hasDemoAccess: boolean;
+  enableDemoAccess: () => void;
   onBack: () => void;
 }) {
+  const [homeNotice, setHomeNotice] = useState("");
+
   if (route.name === "subscription") {
     return (
       <SubscriptionScreen
-        activateSubscription={activateSubscription}
-        hasSubscription={hasSubscription}
+        enableDemoAccess={enableDemoAccess}
+        hasDemoAccess={hasDemoAccess}
         onBack={onBack}
       />
     );
@@ -82,14 +86,32 @@ export function HomeScreen({
           <Text style={styles.brandName}>N'djar</Text>
           <Text style={typography.secondary}>Nha Labur, Nha Sustento</Text>
         </View>
-        <View style={styles.notificationButton}>
+        <Pressable
+          accessibilityLabel="Notificações da demonstração"
+          accessibilityRole="button"
+          onPress={() =>
+            setHomeNotice(
+              "As notificações ainda não estão activas nesta demonstração.",
+            )
+          }
+          style={({ pressed }) => [
+            styles.notificationButton,
+            pressed ? { opacity: 0.72 } : null,
+          ]}
+        >
           <MaterialCommunityIcons
             color={colors.soil}
             name="bell-outline"
             size={24}
           />
-        </View>
+        </Pressable>
       </View>
+
+      {homeNotice ? (
+        <Text style={[typography.secondary, styles.demoNotice]}>
+          {homeNotice}
+        </Text>
+      ) : null}
 
       <ImageBackground
         imageStyle={styles.heroImage}
@@ -99,7 +121,7 @@ export function HomeScreen({
       >
         <View style={styles.heroScrim}>
           <Chip
-            label={hasSubscription ? "Plano activo" : "Calendário grátis"}
+            label={hasDemoAccess ? "Demonstração activa" : "Calendário grátis"}
           />
           <Text style={styles.heroTitle}>Aptidão agrícola das terras</Text>
           <Text style={styles.heroSubtitle}>
@@ -112,17 +134,17 @@ export function HomeScreen({
       <View style={styles.subscriptionStrip}>
         <View style={{ flex: 1 }}>
           <Text style={typography.label}>
-            {hasSubscription ? "Acesso desbloqueado" : "Plano Agricultor"}
+            {hasDemoAccess ? "Acesso de demonstração" : "Plano Agricultor"}
           </Text>
           <Text style={typography.secondary}>
-            {hasSubscription
-              ? "Mapa, cultivos, fórum e Médico Agrícola activos."
+            {hasDemoAccess
+              ? "Módulos abertos apenas para exploração local, sem subscrição."
               : "15.000 XOF para aceder aos módulos técnicos."}
           </Text>
         </View>
         <SecondaryButton
-          icon={hasSubscription ? "check-circle-outline" : "lock-open-outline"}
-          label={hasSubscription ? "Activo" : "Subscrever"}
+          icon={hasDemoAccess ? "flask-outline" : "lock-open-outline"}
+          label={hasDemoAccess ? "Demonstração" : "Subscrever"}
           onPress={() => navigate("subscription")}
         />
       </View>
@@ -139,7 +161,7 @@ export function HomeScreen({
           color={colors.soil}
           icon="map-marker-radius-outline"
           label="Mapa"
-          locked={!hasSubscription}
+          locked={!hasDemoAccess}
           meta="Solo e aptidão"
           onPress={() => onOpenTab("map")}
         />
@@ -154,7 +176,7 @@ export function HomeScreen({
           color="#F26B38"
           icon="sprout-outline"
           label="Informações do Cultivo"
-          locked={!hasSubscription}
+          locked={!hasDemoAccess}
           meta="Fichas agrícolas"
           onPress={() => navigate("crop", undefined, "map")}
         />
@@ -162,7 +184,7 @@ export function HomeScreen({
           color={colors.action}
           icon="forum-outline"
           label="Fórum"
-          locked={!hasSubscription}
+          locked={!hasDemoAccess}
           meta="Perguntas"
           onPress={() => onOpenTab("forum")}
         />
@@ -170,7 +192,7 @@ export function HomeScreen({
           color={colors.soil}
           icon="medical-bag"
           label="Médico Agrícola"
-          locked={!hasSubscription}
+          locked={!hasDemoAccess}
           meta="Consultoria"
           onPress={() => onOpenTab("doctor")}
         />
@@ -194,14 +216,16 @@ export function HomeScreen({
 }
 
 function SubscriptionScreen({
-  hasSubscription,
-  activateSubscription,
+  hasDemoAccess,
+  enableDemoAccess,
   onBack,
 }: {
-  hasSubscription: boolean;
-  activateSubscription: () => void;
+  hasDemoAccess: boolean;
+  enableDemoAccess: () => void;
   onBack: () => void;
 }) {
+  const [paymentNotice, setPaymentNotice] = useState("");
+
   return (
     <ScrollView contentContainerStyle={commonStyles.content}>
       <ScreenHeader
@@ -241,16 +265,25 @@ function SubscriptionScreen({
             title="Médico Agrícola"
           />
           <PrimaryButton
-            icon="cellphone-check"
-            label={
-              hasSubscription ? "Plano já activo" : "Pagar com Orange Money"
-            }
-            onPress={activateSubscription}
+            icon="cellphone"
+            label="Orange Money, demonstração"
+            onPress={() => setPaymentNotice(DEMO_PAYMENT_NOTICE)}
           />
           <SecondaryButton
             icon="cellphone"
-            label="Pagar com TeleTaku"
-            onPress={activateSubscription}
+            label="TeleTaku, demonstração"
+            onPress={() => setPaymentNotice(DEMO_PAYMENT_NOTICE)}
+          />
+          {paymentNotice ? (
+            <Text style={[typography.secondary, styles.demoNotice]}>
+              {paymentNotice}
+            </Text>
+          ) : null}
+          <PrimaryButton
+            icon="flask-outline"
+            label={hasDemoAccess ? "Demonstração já aberta" : DEMO_ACCESS_LABEL}
+            onPress={enableDemoAccess}
+            disabled={hasDemoAccess}
           />
         </View>
       </Card>
@@ -345,7 +378,8 @@ function ContactScreen({ onBack }: { onBack: () => void }) {
           />
           <PrimaryButton
             icon="message-outline"
-            label="Enviar pedido de apoio"
+            label="Apoio indisponível na demonstração"
+            disabled
             onPress={() => undefined}
           />
         </View>
@@ -525,6 +559,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.md,
+    padding: spacing.md,
+  },
+  demoNotice: {
+    backgroundColor: colors.surfaceWarm,
+    borderColor: colors.warning,
+    borderRadius: 8,
+    borderWidth: 1,
     padding: spacing.md,
   },
 });

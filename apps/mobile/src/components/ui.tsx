@@ -75,18 +75,23 @@ export function PrimaryButton({
   label,
   onPress,
   icon,
+  disabled = false,
 }: {
   label: string;
   onPress: () => void;
   icon?: IconName;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
+      accessibilityState={{ disabled }}
       accessibilityRole="button"
       accessibilityLabel={label}
+      disabled={disabled}
       onPress={() => onPress()}
       style={({ pressed }) => [
         commonStyles.button,
+        disabled ? styles.disabledButton : null,
         pressed ? { opacity: 0.82 } : null,
       ]}
     >
@@ -108,18 +113,23 @@ export function SecondaryButton({
   label,
   onPress,
   icon,
+  disabled = false,
 }: {
   label: string;
   onPress: () => void;
   icon?: IconName;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       accessibilityLabel={label}
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={() => onPress()}
       style={({ pressed }) => [
         styles.secondaryButton,
+        disabled ? styles.disabledButton : null,
         pressed ? { opacity: 0.76 } : null,
       ]}
     >
@@ -302,6 +312,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "center",
+  },
+  disabledButton: {
+    opacity: 0.48,
   },
   header: {
     gap: spacing.xs,

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "N'djar",
+    "name": "N'djar Demonstração",
     "slug": "ndjar-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -10,6 +10,7 @@
     "userInterfaceStyle": "light",
     "android": {
       "package": "com.ndjar.mobile",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/brand/ndjar-icon-padded.png",
         "backgroundColor": "#F6F8F1"
