@@ -1,4 +1,8 @@
-import { Inject, Injectable } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { entitlements, subscriptions } from "@ndjar/database";
 import { and, desc, eq } from "drizzle-orm";
 
@@ -71,7 +75,7 @@ export class EntitlementsRepository {
 
   private requireDatabase(): Database {
     if (!this.database) {
-      throw new Error(
+      throw new ServiceUnavailableException(
         "EntitlementsRepository requer uma base de dados real. O modo fixture não permite consultar entitlements.",
       );
     }

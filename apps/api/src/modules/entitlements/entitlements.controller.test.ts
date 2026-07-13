@@ -323,8 +323,11 @@ describe("EntitlementsRepository", () => {
   it("falha de forma clara sem base de dados real", async () => {
     const repository = new EntitlementsRepository(null);
 
-    await expect(repository.findForUser("user-1")).rejects.toThrow(
-      "EntitlementsRepository requer uma base de dados real",
+    await expect(repository.findForUser("user-1")).rejects.toEqual(
+      expect.objectContaining({
+        message: expect.stringContaining("base de dados real"),
+        status: 503,
+      }),
     );
   });
 });

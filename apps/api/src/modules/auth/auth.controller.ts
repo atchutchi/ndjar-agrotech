@@ -20,6 +20,10 @@ import {
   verifySchema,
 } from "./auth.schemas.js";
 import { AuthGuard } from "./auth.guard.js";
+import {
+  AuthRateLimit,
+  AuthRateLimitGuard,
+} from "./auth-rate-limit.guard.js";
 import { AuthService } from "./auth.service.js";
 
 import type { AuthenticatedUser } from "./auth.service.js";
@@ -45,26 +49,36 @@ export class AuthController {
   constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
   @Post("register")
+  @AuthRateLimit({ limit: 5, windowMs: 60 * 60 * 1000 })
+  @UseGuards(AuthRateLimitGuard)
   register(@Body() body: unknown) {
     return this.authService.register(parseBody(registerSchema, body));
   }
 
   @Post("verify")
+  @AuthRateLimit({ limit: 10, windowMs: 15 * 60 * 1000 })
+  @UseGuards(AuthRateLimitGuard)
   verify(@Body() body: unknown) {
     return this.authService.verify(parseBody(verifySchema, body));
   }
 
   @Post("login")
+  @AuthRateLimit({ limit: 5, windowMs: 60 * 1000 })
+  @UseGuards(AuthRateLimitGuard)
   login(@Body() body: unknown) {
     return this.authService.login(parseBody(loginSchema, body));
   }
 
   @Post("refresh")
+  @AuthRateLimit({ limit: 30, windowMs: 60 * 1000 })
+  @UseGuards(AuthRateLimitGuard)
   refresh(@Body() body: unknown) {
     return this.authService.refresh(parseBody(refreshSchema, body));
   }
 
   @Post("forgot-password")
+  @AuthRateLimit({ limit: 3, windowMs: 15 * 60 * 1000 })
+  @UseGuards(AuthRateLimitGuard)
   forgotPassword(@Body() body: unknown) {
     return this.authService.forgotPassword(
       parseBody(forgotPasswordSchema, body),
@@ -72,6 +86,8 @@ export class AuthController {
   }
 
   @Post("reset-password")
+  @AuthRateLimit({ limit: 5, windowMs: 15 * 60 * 1000 })
+  @UseGuards(AuthRateLimitGuard)
   resetPassword(@Body() body: unknown) {
     return this.authService.resetPassword(parseBody(resetPasswordSchema, body));
   }
@@ -83,6 +99,8 @@ export class AuthController {
   }
 
   @Post("logout")
+  @AuthRateLimit({ limit: 30, windowMs: 60 * 1000 })
+  @UseGuards(AuthRateLimitGuard)
   logout(@Body() body: unknown) {
     return this.authService.logout(parseBody(logoutSchema, body));
   }

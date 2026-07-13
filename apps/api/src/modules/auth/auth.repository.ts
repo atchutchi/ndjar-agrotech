@@ -1,4 +1,8 @@
-import { Inject, Injectable } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import {
   authAccounts,
   refreshTokens,
@@ -622,7 +626,7 @@ export class AuthRepository {
 
   private requireDatabase(): Database {
     if (!this.database) {
-      throw new Error(
+      throw new ServiceUnavailableException(
         "AuthRepository requer uma base de dados real; NDJAR_DATABASE_MODE=fixture devolve null.",
       );
     }

@@ -2,6 +2,7 @@ import { hash } from "argon2";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ServiceUnavailableException } from "@nestjs/common";
 
 import {
   AuthRepository,
@@ -352,5 +353,16 @@ describe("AuthRepository verification codes", () => {
     expect(update.set).toHaveBeenCalledWith({
       attempts: expect.anything(),
     });
+  });
+});
+
+describe("AuthRepository fixture mode", () => {
+  it("devolve 503 claro quando a operacao exige PostgreSQL", async () => {
+    const repository = new AuthRepository(null);
+
+    const error = await repository.findById("user-1").catch((caught) => caught);
+
+    expect(error).toBeInstanceOf(ServiceUnavailableException);
+    expect((error as ServiceUnavailableException).getStatus()).toBe(503);
   });
 });

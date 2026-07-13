@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthController } from "./auth.controller.js";
 import { AuthGuard } from "./auth.guard.js";
+import {
+  AuthRateLimitGuard,
+  AuthRateLimitStore,
+} from "./auth-rate-limit.guard.js";
 import { AuthRepository } from "./auth.repository.js";
 import { AuthService } from "./auth.service.js";
 
@@ -33,6 +37,8 @@ async function createController() {
       { provide: AuthService, useValue: authService },
       { provide: AuthGuard, useValue: { canActivate: () => true } },
       { provide: AuthRepository, useValue: { findById: vi.fn() } },
+      AuthRateLimitGuard,
+      AuthRateLimitStore,
     ],
   }).compile();
 
@@ -42,6 +48,20 @@ async function createController() {
 describe("AuthController", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it.each([
+    "register",
+    "verify",
+    "login",
+    "refresh",
+    "forgotPassword",
+    "resetPassword",
+    "logout",
+  ] as const)("limita pedidos em %s", (method) => {
+    expect(
+      Reflect.getMetadata("__guards__", AuthController.prototype[method]),
+    ).toContain(AuthRateLimitGuard);
   });
 
   it("regista uma conta de agricultor", async () => {
