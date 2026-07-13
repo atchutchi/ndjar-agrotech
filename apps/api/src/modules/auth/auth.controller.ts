@@ -20,10 +20,7 @@ import {
   verifySchema,
 } from "./auth.schemas.js";
 import { AuthGuard } from "./auth.guard.js";
-import {
-  AuthRateLimit,
-  AuthRateLimitGuard,
-} from "./auth-rate-limit.guard.js";
+import { AuthRateLimit, AuthRateLimitGuard } from "./auth-rate-limit.guard.js";
 import { AuthService } from "./auth.service.js";
 
 import type { AuthenticatedUser } from "./auth.service.js";

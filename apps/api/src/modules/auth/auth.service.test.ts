@@ -111,7 +111,9 @@ describe("AuthService", () => {
     repository.findByIdentifierHash.mockResolvedValue({
       displayName: "Binta Cisse",
       id: "user-1",
-      passwordHash: await import("argon2").then(({ hash }) => hash(testPassword)),
+      passwordHash: await import("argon2").then(({ hash }) =>
+        hash(testPassword),
+      ),
       roles: ["farmer"],
       verifiedAt: null,
     });

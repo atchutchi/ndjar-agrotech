@@ -653,7 +653,9 @@ export class AuthRepository {
       displayName: firstRow.displayName,
       id: firstRow.id,
       passwordHash: firstRow.passwordHash,
-      roles: [...new Set(rows.map((row) => row.roleId).filter(Boolean))] as string[],
+      roles: [
+        ...new Set(rows.map((row) => row.roleId).filter(Boolean)),
+      ] as string[],
       verifiedAt: firstRow.verifiedAt,
     };
   }
