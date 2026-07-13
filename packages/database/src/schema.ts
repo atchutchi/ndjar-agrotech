@@ -646,6 +646,20 @@ export const verificationCodes = pgTable(
   ],
 );
 
+export const authRateLimits = pgTable(
+  "auth_rate_limits",
+  {
+    key: text("key").primaryKey(),
+    requestCount: integer("request_count").default(1).notNull(),
+    windowStartedAt: timestamp("window_started_at", {
+      withTimezone: true,
+    }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    ...timestampColumns(),
+  },
+  (table) => [index("auth_rate_limits_expires_at_idx").on(table.expiresAt)],
+);
+
 export const refreshTokens = pgTable(
   "refresh_tokens",
   {

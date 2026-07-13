@@ -76,4 +76,21 @@ describe("database operations", () => {
     expect(migration).toContain("soil_samples");
     expect(migration).toContain("corrija os dados antes de migrar");
   });
+
+  it("migrates the shared authentication rate limit storage", () => {
+    const migration = readFileSync(
+      resolve(import.meta.dirname, "../drizzle/0002_auth_rate_limits.sql"),
+      "utf8",
+    );
+
+    expect(migration).toContain('CREATE TABLE "auth_rate_limits"');
+    expect(migration).toContain('"key" text PRIMARY KEY NOT NULL');
+    expect(migration).toContain('"request_count" integer DEFAULT 1 NOT NULL');
+    expect(migration).toContain(
+      '"expires_at" timestamp with time zone NOT NULL',
+    );
+    expect(migration).toContain(
+      'CREATE INDEX "auth_rate_limits_expires_at_idx"',
+    );
+  });
 });

@@ -10,6 +10,7 @@ import {
 } from "./auth-rate-limit.guard.js";
 import { AuthRepository } from "./auth.repository.js";
 import { AuthService } from "./auth.service.js";
+import { DATABASE } from "../database/database.module.js";
 
 const authService = {
   forgotPassword: vi.fn(),
@@ -37,6 +38,7 @@ async function createController() {
       { provide: AuthService, useValue: authService },
       { provide: AuthGuard, useValue: { canActivate: () => true } },
       { provide: AuthRepository, useValue: { findById: vi.fn() } },
+      { provide: DATABASE, useValue: null },
       AuthRateLimitGuard,
       AuthRateLimitStore,
     ],

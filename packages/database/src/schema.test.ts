@@ -6,6 +6,7 @@ import {
   auditLogs,
   answerTemplates,
   authAccounts,
+  authRateLimits,
   calendarTasks,
   communities,
   consultationResponses,
@@ -148,6 +149,21 @@ describe("production auth schema", () => {
         "target_hash,purpose,consumed_at,expires_at",
       ]),
     );
+  });
+
+  it("persiste rate limits partilhados e indexa a sua expiracao", () => {
+    const config = getTableConfig(authRateLimits);
+
+    expect(authRateLimits.key.primary).toBe(true);
+    expect(authRateLimits.requestCount.notNull).toBe(true);
+    expect(authRateLimits.expiresAt.notNull).toBe(true);
+    expect(
+      config.indexes.some((index) =>
+        index.config.columns.some(
+          (column) => "name" in column && column.name === "expires_at",
+        ),
+      ),
+    ).toBe(true);
   });
 
   it("impede entitlements de apontarem para subscricoes de outro utilizador", () => {
