@@ -29,6 +29,10 @@ describe("database seed data", () => {
         source.id.endsWith(`-v${source.version}`),
       ),
     ).toBe(true);
+    expect(pilotSeedManifest.entityIds.crops).toEqual(
+      seedCrops.map((record) => record.id).sort(),
+    );
+    expect(pilotSeedManifest.tombstones).toEqual([]);
   });
 
   it("orders parent tables before dependent records", () => {

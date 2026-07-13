@@ -213,6 +213,10 @@ export const seedManifests = pgTable(
     key: text("key").primaryKey(),
     version: integer("version").notNull(),
     contentHash: text("content_hash").notNull(),
+    entityIds: jsonb("entity_ids")
+      .$type<Record<string, string[]>>()
+      .default({})
+      .notNull(),
     appliedAt: timestamp("applied_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -223,6 +227,33 @@ export const seedManifests = pgTable(
     check(
       "seed_manifests_content_hash_format",
       sql`${table.contentHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+  ],
+);
+
+export const seedTombstones = pgTable(
+  "seed_tombstones",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    seedKey: text("seed_key")
+      .notNull()
+      .references(() => seedManifests.key),
+    entityType: text("entity_type").notNull(),
+    entityId: text("entity_id").notNull(),
+    removedInVersion: integer("removed_in_version").notNull(),
+    removedAt: timestamp("removed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    check(
+      "seed_tombstones_version_positive",
+      sql`${table.removedInVersion} >= 1`,
+    ),
+    uniqueIndex("seed_tombstones_entity_unique").on(
+      table.seedKey,
+      table.entityType,
+      table.entityId,
     ),
   ],
 );

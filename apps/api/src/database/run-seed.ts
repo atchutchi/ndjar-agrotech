@@ -11,6 +11,7 @@ import {
   crops,
   regions,
   seedManifests,
+  seedTombstones,
   soilSamples,
 } from "@ndjar/database";
 import * as databaseSchema from "@ndjar/database";
@@ -24,13 +25,23 @@ import type { Database } from "../modules/database/database.module.js";
 
 interface SeedManifest {
   contentHash: string;
+  entityIds: SeedEntityInventory;
   key: string;
+  tombstones: readonly SeedTombstoneDeclaration[];
   version: number;
 }
 
 interface PersistedSeedManifest {
   contentHash: string;
+  entityIds: SeedEntityInventory;
   version: number;
+}
+
+type SeedEntityInventory = Record<string, string[]>;
+
+interface SeedTombstoneDeclaration {
+  entityId: string;
+  entityType: string;
 }
 
 type AgronomicSourceRecord = (typeof pilotSeedData.agronomicSources)[number];
@@ -38,8 +49,17 @@ type AgronomicSourceRecord = (typeof pilotSeedData.agronomicSources)[number];
 export function planSeedApplication(
   existing: PersistedSeedManifest | null,
   incoming: SeedManifest,
-): "apply" | "skip" {
-  if (!existing || existing.version < incoming.version) {
+): "apply" | "backfill" | "skip" {
+  if (!existing) {
+    return "apply";
+  }
+
+  if (existing.version < incoming.version) {
+    if (Object.keys(existing.entityIds).length === 0) {
+      throw new Error(
+        "O inventario do seed persistido esta vazio. Reaplique primeiro a versao actual para efectuar o backfill.",
+      );
+    }
     return "apply";
   }
 
@@ -55,7 +75,83 @@ export function planSeedApplication(
     );
   }
 
+  if (Object.keys(existing.entityIds).length === 0) {
+    return "backfill";
+  }
+
+  if (
+    normalizeSeedInventory(existing.entityIds) !==
+    normalizeSeedInventory(incoming.entityIds)
+  ) {
+    throw new Error(
+      "O inventario do seed diverge para a mesma versao e hash de conteudo.",
+    );
+  }
+
   return "skip";
+}
+
+function normalizeSeedInventory(inventory: SeedEntityInventory): string {
+  return JSON.stringify(
+    Object.fromEntries(
+      Object.keys(inventory)
+        .sort()
+        .map((entityType) => [
+          entityType,
+          [...(inventory[entityType] ?? [])].sort(),
+        ]),
+    ),
+  );
+}
+
+function tombstoneKey(tombstone: SeedTombstoneDeclaration): string {
+  return `${tombstone.entityType}\u0000${tombstone.entityId}`;
+}
+
+export function reconcileSeedTombstones(
+  previous: SeedEntityInventory,
+  current: SeedEntityInventory,
+  declared: readonly SeedTombstoneDeclaration[],
+): SeedTombstoneDeclaration[] {
+  const removed: SeedTombstoneDeclaration[] = [];
+
+  for (const [entityType, previousIds] of Object.entries(previous)) {
+    const currentIds = new Set(current[entityType] ?? []);
+    for (const entityId of previousIds) {
+      if (!currentIds.has(entityId)) {
+        removed.push({ entityId, entityType });
+      }
+    }
+  }
+
+  const removedKeys = new Set(removed.map(tombstoneKey));
+  const declaredKeys = new Set(declared.map(tombstoneKey));
+
+  if (declaredKeys.size !== declared.length) {
+    throw new Error("O manifesto contem tombstones duplicados.");
+  }
+
+  const undeclared = removed.find(
+    (tombstone) => !declaredKeys.has(tombstoneKey(tombstone)),
+  );
+  if (undeclared) {
+    throw new Error(
+      `A remocao ${undeclared.entityType}/${undeclared.entityId} exige um tombstone explicito no manifesto.`,
+    );
+  }
+
+  const unrelated = declared.find(
+    (tombstone) => !removedKeys.has(tombstoneKey(tombstone)),
+  );
+  if (unrelated) {
+    throw new Error(
+      `O tombstone ${unrelated.entityType}/${unrelated.entityId} nao corresponde a uma remocao desta versao.`,
+    );
+  }
+
+  return [...declared].sort((left, right) =>
+    tombstoneKey(left).localeCompare(tombstoneKey(right)),
+  );
 }
 
 export function verifyAgronomicSources(
@@ -89,15 +185,31 @@ export async function seedPilotDatabase(
     const [existingManifest] = await tx
       .select({
         contentHash: seedManifests.contentHash,
+        entityIds: seedManifests.entityIds,
         version: seedManifests.version,
       })
       .from(seedManifests)
       .for("update")
       .where(eq(seedManifests.key, manifest.key));
 
-    if (planSeedApplication(existingManifest ?? null, manifest) === "skip") {
+    const application = planSeedApplication(existingManifest ?? null, manifest);
+    if (application === "skip") {
       return;
     }
+
+    if (application === "backfill") {
+      await tx
+        .update(seedManifests)
+        .set({ entityIds: manifest.entityIds, updatedAt: new Date() })
+        .where(eq(seedManifests.key, manifest.key));
+      return;
+    }
+
+    const tombstones = reconcileSeedTombstones(
+      existingManifest?.entityIds ?? {},
+      manifest.entityIds,
+      manifest.tombstones,
+    );
 
     await tx
       .insert(agronomicSources)
@@ -192,17 +304,34 @@ export async function seedPilotDatabase(
         .onConflictDoUpdate({ target: calendarTasks.id, set: record });
     }
 
+    if (tombstones.length > 0) {
+      await tx
+        .insert(seedTombstones)
+        .values(
+          tombstones.map((tombstone) => ({
+            ...tombstone,
+            removedInVersion: manifest.version,
+            seedKey: manifest.key,
+          })),
+        )
+        .onConflictDoNothing();
+    }
+
     await tx
       .insert(seedManifests)
       .values({
-        ...manifest,
         appliedAt: new Date(),
+        contentHash: manifest.contentHash,
+        entityIds: manifest.entityIds,
+        key: manifest.key,
+        version: manifest.version,
       })
       .onConflictDoUpdate({
         target: seedManifests.key,
         set: {
           appliedAt: new Date(),
           contentHash: manifest.contentHash,
+          entityIds: manifest.entityIds,
           version: manifest.version,
         },
       });

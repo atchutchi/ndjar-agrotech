@@ -138,10 +138,7 @@ describe("database operations", () => {
 
   it("confirms clinical role and template-version coherence incrementally", () => {
     const migration = readFileSync(
-      resolve(
-        import.meta.dirname,
-        "../drizzle/0006_clinical_confirmation.sql",
-      ),
+      resolve(import.meta.dirname, "../drizzle/0006_clinical_confirmation.sql"),
       "utf8",
     );
 
@@ -209,10 +206,7 @@ describe("database operations", () => {
 
   it("prevents overlapping valid subscriptions for the same user and plan", () => {
     const migration = readFileSync(
-      resolve(
-        import.meta.dirname,
-        "../drizzle/0008_subscription_overlap.sql",
-      ),
+      resolve(import.meta.dirname, "../drizzle/0008_subscription_overlap.sql"),
       "utf8",
     );
     const extension = migration.indexOf(
@@ -228,12 +222,35 @@ describe("database operations", () => {
     expect(extension).toBeGreaterThanOrEqual(0);
     expect(preflight).toBeGreaterThan(extension);
     expect(migration).toContain(
-      "tstzrange(current_subscription.\"starts_at\", current_subscription.\"expires_at\", '[)') &&",
+      'tstzrange(current_subscription."starts_at", current_subscription."expires_at", \'[)\') &&',
     );
-    expect(migration).toContain(
-      "WHERE (\"status\" IN ('active', 'trial'))",
-    );
+    expect(migration).toContain("WHERE (\"status\" IN ('active', 'trial'))");
     expect(exclusion).toBeGreaterThan(preflight);
+  });
+
+  it("migrates seed inventories and immutable tombstones without deletion", () => {
+    const migration = readFileSync(
+      resolve(import.meta.dirname, "../drizzle/0009_seed_tombstones.sql"),
+      "utf8",
+    );
+    const runner = readFileSync(
+      resolve(
+        import.meta.dirname,
+        "../../../apps/api/src/database/run-seed.ts",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain(
+      "ADD COLUMN \"entity_ids\" jsonb DEFAULT '{}'::jsonb NOT NULL",
+    );
+    expect(migration).toContain('CREATE TABLE "seed_tombstones"');
+    expect(migration).toContain('"removed_in_version" integer NOT NULL');
+    expect(migration).toContain(
+      "CREATE TRIGGER seed_tombstone_immutable_guard",
+    );
+    expect(runner).toContain("reconcileSeedTombstones");
+    expect(runner).not.toContain(".delete(");
   });
 
   it("migrates versioned seed manifests", () => {

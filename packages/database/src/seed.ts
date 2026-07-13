@@ -273,11 +273,33 @@ export const pilotSeedData = {
   calendarTasks: seedCalendarTasks,
 } as const;
 
+export interface SeedTombstoneDeclaration {
+  entityId: string;
+  entityType: string;
+}
+
+export type SeedEntityInventory = Record<string, string[]>;
+
+function createSeedEntityInventory(
+  data: Record<string, readonly { id: string }[]>,
+): SeedEntityInventory {
+  return Object.fromEntries(
+    Object.entries(data).map(([entityType, records]) => [
+      entityType,
+      records.map((record) => record.id).sort(),
+    ]),
+  );
+}
+
+export const pilotSeedEntityIds = createSeedEntityInventory(pilotSeedData);
+
 export const pilotSeedManifest = {
   contentHash: createHash("sha256")
     .update(JSON.stringify(pilotSeedData))
     .digest("hex"),
+  entityIds: pilotSeedEntityIds,
   key: "pilot-south",
+  tombstones: [] as SeedTombstoneDeclaration[],
   version: 1,
 } as const;
 

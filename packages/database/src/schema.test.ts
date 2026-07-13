@@ -20,6 +20,7 @@ import {
   regions,
   roles,
   seedManifests,
+  seedTombstones,
   soilSamples,
   sourceStatusEnum,
   subscriptions,
@@ -208,6 +209,8 @@ describe("production auth schema", () => {
     expect(seedManifests.key.primary).toBe(true);
     expect(seedManifests.version.notNull).toBe(true);
     expect(seedManifests.contentHash.notNull).toBe(true);
+    expect(seedManifests.entityIds.notNull).toBe(true);
+    expect(seedTombstones.removedInVersion.notNull).toBe(true);
   });
 
   it("impede entitlements de apontarem para subscricoes de outro utilizador", () => {
