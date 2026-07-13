@@ -544,6 +544,7 @@ ALTER TABLE "crop_production_evidence" ADD CONSTRAINT "crop_production_evidence_
 ALTER TABLE "crop_production_evidence" ADD CONSTRAINT "crop_production_evidence_source_id_agronomic_sources_id_fk" FOREIGN KEY ("source_id") REFERENCES "public"."agronomic_sources"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "crops" ADD CONSTRAINT "crops_source_id_agronomic_sources_id_fk" FOREIGN KEY ("source_id") REFERENCES "public"."agronomic_sources"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "entitlements" ADD CONSTRAINT "entitlements_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "subscriptions_id_user_id_unique" ON "subscriptions" USING btree ("id","user_id");--> statement-breakpoint
 ALTER TABLE "entitlements" ADD CONSTRAINT "entitlements_subscription_user_fk" FOREIGN KEY ("subscription_id","user_id") REFERENCES "public"."subscriptions"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notification_jobs" ADD CONSTRAINT "notification_jobs_consultation_id_consultations_id_fk" FOREIGN KEY ("consultation_id") REFERENCES "public"."consultations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notification_jobs" ADD CONSTRAINT "notification_jobs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -582,6 +583,5 @@ CREATE INDEX "refresh_tokens_user_id_idx" ON "refresh_tokens" USING btree ("user
 CREATE INDEX "soil_samples_region_id_idx" ON "soil_samples" USING btree ("region_id");--> statement-breakpoint
 CREATE INDEX "soil_samples_community_id_idx" ON "soil_samples" USING btree ("community_id");--> statement-breakpoint
 CREATE INDEX "soil_samples_source_id_idx" ON "soil_samples" USING btree ("source_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "subscriptions_id_user_id_unique" ON "subscriptions" USING btree ("id","user_id");--> statement-breakpoint
 CREATE INDEX "subscriptions_user_status_validity_idx" ON "subscriptions" USING btree ("user_id","status","starts_at","expires_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "user_roles_user_id_role_id_unique" ON "user_roles" USING btree ("user_id","role_id");

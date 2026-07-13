@@ -46,6 +46,23 @@ describe("database operations", () => {
     ).toBeLessThan(migration.indexOf("CREATE TABLE"));
   });
 
+  it("creates the subscription ownership key before entitlements references it", () => {
+    const migration = readFileSync(
+      resolve(import.meta.dirname, "../drizzle/0000_initial_schema.sql"),
+      "utf8",
+    );
+    const ownershipKey =
+      'CREATE UNIQUE INDEX "subscriptions_id_user_id_unique"';
+    const entitlementForeignKey =
+      'ADD CONSTRAINT "entitlements_subscription_user_fk"';
+
+    expect(migration).toContain(ownershipKey);
+    expect(migration).toContain(entitlementForeignKey);
+    expect(migration.indexOf(ownershipKey)).toBeLessThan(
+      migration.indexOf(entitlementForeignKey),
+    );
+  });
+
   it("preflights incompatible pH rows before adding strict coherence", () => {
     const migration = readFileSync(
       resolve(
