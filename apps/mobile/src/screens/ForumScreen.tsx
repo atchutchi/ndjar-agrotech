@@ -65,11 +65,20 @@ export function ForumScreen({
 }) {
   const [draft, setDraft] = useState("");
   const [savedMessage, setSavedMessage] = useState("");
+  const [showReplyEditor, setShowReplyEditor] = useState(false);
+  const [replyDraft, setReplyDraft] = useState("");
+  const [replySavedMessage, setReplySavedMessage] = useState("");
   const topic = forumTopics.find((item) => item.id === route.params?.topicId);
 
   useEffect(() => {
     offlineStore.getDraft("forum-post").then(setDraft);
   }, []);
+
+  useEffect(() => {
+    setShowReplyEditor(false);
+    setReplyDraft("");
+    setReplySavedMessage("");
+  }, [route.params?.topicId]);
 
   function updateDraft(value: string) {
     setDraft(value);
@@ -93,9 +102,49 @@ export function ForumScreen({
             />
             <PrimaryButton
               icon="reply-outline"
-              label="Responder"
-              onPress={() => navigate("root", undefined, "doctor")}
+              label={showReplyEditor ? "Fechar editor" : "Responder localmente"}
+              onPress={() => setShowReplyEditor((isVisible) => !isVisible)}
             />
+            {showReplyEditor ? (
+              <View style={{ gap: spacing.md }}>
+                <Text style={typography.label}>Resposta temporária</Text>
+                <TextInput
+                  accessibilityLabel={`Resposta local ao tópico ${topic.title}`}
+                  multiline
+                  onChangeText={(value) => {
+                    setReplyDraft(value);
+                    setReplySavedMessage("");
+                  }}
+                  placeholder="Escreve uma resposta para testar o fluxo"
+                  placeholderTextColor={colors.textSecondary}
+                  style={[
+                    commonStyles.input,
+                    { minHeight: 104, textAlignVertical: "top" },
+                  ]}
+                  value={replyDraft}
+                />
+                <PrimaryButton
+                  disabled={replyDraft.trim().length < 3}
+                  icon="content-save-outline"
+                  label="Guardar resposta temporária"
+                  onPress={() =>
+                    setReplySavedMessage(
+                      "Resposta guardada apenas nesta sessão. Não foi publicada no fórum.",
+                    )
+                  }
+                />
+                {replySavedMessage ? (
+                  <Text
+                    style={[
+                      typography.secondary,
+                      { color: colors.brandPrimary },
+                    ]}
+                  >
+                    {replySavedMessage}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
           </View>
         </Card>
       </ScrollView>

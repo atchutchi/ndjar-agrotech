@@ -11,6 +11,7 @@
     "android": {
       "package": "com.ndjar.mobile",
       "versionCode": 1,
+      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/brand/ndjar-icon-padded.png",
         "backgroundColor": "#F6F8F1"

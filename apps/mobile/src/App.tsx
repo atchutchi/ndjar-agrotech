@@ -1,20 +1,14 @@
 import { useEffect, useState } from "react";
-import {
-  BackHandler,
-  Platform,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  View,
-} from "react-native";
+import { BackHandler, StatusBar, StyleSheet, View } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
-import { getAppInsets } from "./layout/appInsets";
 import { BottomTabs, type TabId } from "./navigation/tabs";
 import {
   backStack,
   makeRoot,
   openTabStack,
   pushRouteStack,
+  resumeDemoTargetStack,
   type AppRoute,
   type Navigate,
   type RouteName,
@@ -91,10 +85,6 @@ export default function App() {
   const [snapshot, setSnapshot] = useState<PilotSnapshot | null>(null);
   const [hasDemoAccess, setHasDemoAccess] = useState(false);
   const current = stack[stack.length - 1] ?? makeRoot("home");
-  const insets = getAppInsets({
-    platform: Platform.OS,
-    statusBarHeight: StatusBar.currentHeight ?? 0,
-  });
 
   useEffect(() => {
     let isMounted = true;
@@ -151,7 +141,7 @@ export default function App() {
 
   function enableDemoAccess() {
     setHasDemoAccess(true);
-    setStack([makeRoot("home")]);
+    setStack((previousStack) => resumeDemoTargetStack(previousStack));
   }
 
   function goBack() {
@@ -159,33 +149,30 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={commonStyles.screen}>
-      <StatusBar
-        backgroundColor={colors.background}
-        barStyle="dark-content"
-        translucent={false}
-      />
-      <View
-        style={[
-          styles.appFrame,
-          { paddingBottom: insets.bottom, paddingTop: insets.top },
-        ]}
-      >
-        <View style={styles.screenFrame}>
-          <ActiveScreen
-            enableDemoAccess={enableDemoAccess}
-            canGoBack={stack.length > 1 || current.tab !== "home"}
-            current={current}
-            goBack={goBack}
-            hasDemoAccess={hasDemoAccess}
-            navigate={navigate}
-            openTab={openTab}
-            snapshot={snapshot}
-          />
+    <SafeAreaProvider>
+      <SafeAreaView edges={["top", "bottom"]} style={commonStyles.screen}>
+        <StatusBar
+          backgroundColor="transparent"
+          barStyle="dark-content"
+          translucent
+        />
+        <View style={styles.appFrame}>
+          <View style={styles.screenFrame}>
+            <ActiveScreen
+              enableDemoAccess={enableDemoAccess}
+              canGoBack={stack.length > 1 || current.tab !== "home"}
+              current={current}
+              goBack={goBack}
+              hasDemoAccess={hasDemoAccess}
+              navigate={navigate}
+              openTab={openTab}
+              snapshot={snapshot}
+            />
+          </View>
+          <BottomTabs activeTab={current.tab} onChange={openTab} />
         </View>
-        <BottomTabs activeTab={current.tab} onChange={openTab} />
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 

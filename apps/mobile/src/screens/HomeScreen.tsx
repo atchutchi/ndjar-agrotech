@@ -30,7 +30,11 @@ import {
   ScreenHeader,
   SecondaryButton,
 } from "../components/ui";
-import { DEMO_ACCESS_LABEL, DEMO_PAYMENT_NOTICE } from "../demo/demoSafety";
+import {
+  DEMO_ACCESS_LABEL,
+  DEMO_CAPABILITIES,
+  DEMO_PAYMENT_NOTICE,
+} from "../demo/demoSafety";
 import type { TabId } from "../navigation/tabs";
 import type { PilotSnapshot } from "../storage/offlineStore";
 import { colors, commonStyles, spacing, typography } from "../theme";
@@ -231,7 +235,7 @@ function SubscriptionScreen({
       <ScreenHeader
         onBack={onBack}
         title="Subscrição"
-        subtitle="O acesso pago financia estudos no terreno, consultores e actualização da base agrícola."
+        subtitle="Pré-visualização comercial. Os pagamentos e serviços ligados ao servidor ainda não estão disponíveis."
       />
       <Card>
         <View style={{ gap: spacing.lg }}>
@@ -245,25 +249,18 @@ function SubscriptionScreen({
               <Text style={typography.sectionTitle}>Plano Agricultor</Text>
               <Text style={styles.price}>15.000 XOF</Text>
               <Text style={typography.secondary}>
-                Acesso aos módulos técnicos
+                Preço proposto para a futura subscrição
               </Text>
             </View>
           </View>
-          <ListItem
-            icon="map-search-outline"
-            meta="Mapa interactivo, solo, aptidão agrícola e pastagem por zona."
-            title="Mapa e solo"
-          />
-          <ListItem
-            icon="sprout-outline"
-            meta="Fichas de cultivo, pH de referência e recomendações prudentes."
-            title="Informações do cultivo"
-          />
-          <ListItem
-            icon="medical-bag"
-            meta="Triagem automática e encaminhamento para consultor agrícola."
-            title="Médico Agrícola"
-          />
+          {DEMO_CAPABILITIES.map((capability) => (
+            <ListItem
+              icon={capability.icon}
+              key={capability.id}
+              meta={capability.description}
+              title={capability.title}
+            />
+          ))}
           <PrimaryButton
             icon="cellphone"
             label="Orange Money, demonstração"

@@ -261,6 +261,7 @@ export function MapScreen({
               <Pressable
                 accessibilityLabel={community?.name ?? point.id}
                 accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
                 key={point.id}
                 onPress={() => setSelectedCommunityId(point.id)}
                 style={[

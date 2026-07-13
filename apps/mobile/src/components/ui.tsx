@@ -303,9 +303,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 999,
     borderWidth: 1,
-    height: 38,
+    height: 44,
     justifyContent: "center",
-    width: 38,
+    width: 44,
   },
   buttonContent: {
     alignItems: "center",

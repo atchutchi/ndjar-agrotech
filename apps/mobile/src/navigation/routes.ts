@@ -15,6 +15,7 @@ export interface AppRoute {
   tab: TabId;
   name: RouteName;
   params?: Record<string, string>;
+  target?: AppRoute;
 }
 
 export type Navigate = (
@@ -46,7 +47,14 @@ function paywallRoute(target: AppRoute): AppRoute {
     name: "subscription",
     params: { targetName: target.name, targetTab: target.tab },
     tab: "home",
+    target,
   };
+}
+
+function stackWithoutCurrentPaywall(stack: AppRoute[]): AppRoute[] {
+  return stack[stack.length - 1]?.name === "subscription"
+    ? stack.slice(0, -1)
+    : stack;
 }
 
 export function openTabStack(
@@ -57,7 +65,7 @@ export function openTabStack(
   const nextRoute = makeRoot(tab);
 
   if (shouldGateRoute(nextRoute, hasDemoAccess)) {
-    return [...stack, paywallRoute(nextRoute)];
+    return [...stackWithoutCurrentPaywall(stack), paywallRoute(nextRoute)];
   }
 
   return [nextRoute];
@@ -68,10 +76,21 @@ export function pushRouteStack(
   route: AppRoute,
   hasDemoAccess: boolean,
 ): AppRoute[] {
-  return [
-    ...stack,
-    shouldGateRoute(route, hasDemoAccess) ? paywallRoute(route) : route,
-  ];
+  if (shouldGateRoute(route, hasDemoAccess)) {
+    return [...stackWithoutCurrentPaywall(stack), paywallRoute(route)];
+  }
+
+  return [...stack, route];
+}
+
+export function resumeDemoTargetStack(stack: AppRoute[]): AppRoute[] {
+  const current = stack[stack.length - 1];
+
+  if (current?.name !== "subscription" || !current.target) {
+    return [makeRoot("home")];
+  }
+
+  return [...stack.slice(0, -1), current.target];
 }
 
 export function backStack(stack: AppRoute[]): AppRoute[] | null {

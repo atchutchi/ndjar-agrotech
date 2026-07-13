@@ -4,6 +4,7 @@ import {
   createDoctorDraftResult,
   createUnavailableActionResult,
   DEMO_ACCESS_LABEL,
+  DEMO_CAPABILITIES,
   DEMO_PAYMENT_NOTICE,
   TEMPORARY_DRAFT_NOTICE,
 } from "./demoSafety";
@@ -24,6 +25,27 @@ describe("demonstration safety messages", () => {
     expect(DEMO_PAYMENT_NOTICE).toContain("nenhuma cobrança");
     expect(DEMO_PAYMENT_NOTICE).toContain("não activa uma subscrição");
     expect(DEMO_ACCESS_LABEL).toBe("Explorar demonstração");
+  });
+
+  it("describes only capabilities that the local demonstration actually provides", () => {
+    expect(DEMO_CAPABILITIES).toEqual([
+      expect.objectContaining({
+        description: expect.stringContaining("ilustrativo"),
+        title: "Esquema do piloto",
+      }),
+      expect.objectContaining({
+        description: expect.stringContaining("por validar"),
+        title: "Fichas de cultivo",
+      }),
+      expect.objectContaining({
+        description: expect.stringContaining("sem envio"),
+        title: "Análise local",
+      }),
+    ]);
+
+    expect(JSON.stringify(DEMO_CAPABILITIES)).not.toMatch(
+      /mapa interactivo|encaminhamento|recomendações prudentes/i,
+    );
   });
 
   it.each(["fotografia", "sincronização", "terminar sessão"])(

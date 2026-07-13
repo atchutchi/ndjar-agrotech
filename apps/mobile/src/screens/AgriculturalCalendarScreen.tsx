@@ -268,6 +268,7 @@ function MonthPill({
     <Pressable
       accessibilityLabel={month.label}
       accessibilityRole="button"
+      accessibilityState={{ selected }}
       onPress={onPress}
       style={({ pressed }) => [
         styles.monthPill,
@@ -314,6 +315,7 @@ function CropGroupTile({
     <Pressable
       accessibilityLabel={group.title}
       accessibilityRole="button"
+      accessibilityState={{ selected }}
       onPress={onPress}
       style={({ pressed }) => [
         styles.groupTile,

@@ -45,4 +45,13 @@ describe("mobile demonstration content", () => {
     expect(buildNotes).toContain("assinatura de depuração");
     expect(buildNotes).toContain("não é uma release assinada");
   });
+
+  it("keeps forum replies in an honest local editor on the selected topic", () => {
+    const forum = read("../screens/ForumScreen.tsx");
+
+    expect(forum).toContain("showReplyEditor");
+    expect(forum).toContain("Guardar resposta temporária");
+    expect(forum).toContain("Resposta guardada apenas nesta sessão");
+    expect(forum).not.toContain('navigate("root", undefined, "doctor")');
+  });
 });
