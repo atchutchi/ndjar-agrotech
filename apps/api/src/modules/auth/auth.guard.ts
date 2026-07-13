@@ -46,29 +46,37 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException("Sessão obrigatória");
     }
 
+    let payload: Awaited<ReturnType<typeof verifyAccessToken>>;
     try {
-      const payload = await verifyAccessToken(token);
-      if (!payload.sub) {
-        throw new UnauthorizedException("Sessão obrigatória");
-      }
+      payload = await verifyAccessToken(token);
+    } catch {
+      throw new UnauthorizedException("Sessão obrigatória");
+    }
+    if (!payload.sub) {
+      throw new UnauthorizedException("Sessão obrigatória");
+    }
 
-      const currentUser = await this.repository.findById(payload.sub);
-      if (!currentUser) {
-        throw new UnauthorizedException("Sessão obrigatória");
-      }
-
-      request.user = {
-        id: currentUser.id,
-        roles: currentUser.roles,
-      };
-
-      return true;
+    let currentUser: Awaited<ReturnType<AuthRepository["findById"]>>;
+    try {
+      currentUser = await this.repository.findById(payload.sub);
     } catch (error) {
       if (error instanceof ServiceUnavailableException) {
         throw error;
       }
 
+      throw new ServiceUnavailableException(
+        "Nao foi possivel validar a sessao na base de dados.",
+      );
+    }
+    if (!currentUser) {
       throw new UnauthorizedException("Sessão obrigatória");
     }
+
+    request.user = {
+      id: currentUser.id,
+      roles: currentUser.roles,
+    };
+
+    return true;
   }
 }

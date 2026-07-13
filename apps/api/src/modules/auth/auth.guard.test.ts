@@ -94,6 +94,17 @@ describe("AuthGuard", () => {
     );
   });
 
+  it("converte uma falha operacional nao tipificada da base em 503", async () => {
+    repository.findById.mockRejectedValue(new Error("connection terminated"));
+    const token = await signAccessToken({ roles: ["farmer"], sub: "user-1" });
+
+    await expect(
+      createGuard().canActivate(
+        requestContext({ headers: { authorization: `Bearer ${token}` } }),
+      ),
+    ).rejects.toEqual(expect.objectContaining({ status: 503 }));
+  });
+
   it("usa os papeis actuais da base de dados e nao os papeis antigos do JWT", async () => {
     repository.findById.mockResolvedValue({
       displayName: "Admin",
