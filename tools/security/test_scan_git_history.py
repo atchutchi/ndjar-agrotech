@@ -12,6 +12,99 @@ SCANNER = Path(__file__).with_name("scan_git_history.py")
 
 
 class GitHistorySecretScanTest(unittest.TestCase):
+    def test_detects_multiline_assignments_in_code_objects_and_config(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repository = Path(temporary_directory)
+            self.initialize_repository(repository)
+            (repository / "README.md").write_text("clean\n", encoding="utf-8")
+            self.commit_all(repository, "base")
+            base = self.run_git(repository, "rev-parse", "HEAD").stdout.strip()
+
+            keys = ["pass" + "word", "client" + "Secret", "api" + "Token"]
+            values = [secrets.token_urlsafe(24) for _ in range(3)]
+            (repository / "settings.ts").write_text(
+                "".join(
+                    [
+                        f"const {keys[0]} =\n",
+                        f'  "{values[0]}";\n',
+                        "const payload = {\n",
+                        f"  {keys[1]}:\n",
+                        f'    "{values[1]}",\n',
+                        "};\n",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (repository / "settings.yaml").write_text(
+                f'{keys[2]}:\n  "{values[2]}"\n', encoding="utf-8"
+            )
+            self.commit_all(repository, "multiline credentials")
+            head = self.run_git(repository, "rev-parse", "HEAD").stdout.strip()
+
+            tree_result = self.run_scanner(repository, "--tree", check=False)
+            history_result = self.run_scanner(
+                repository,
+                "--base",
+                base,
+                "--head",
+                head,
+                check=False,
+            )
+
+            for result in (tree_result, history_result):
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("settings.ts:1", result.stdout)
+                self.assertIn("settings.ts:4", result.stdout)
+                self.assertIn("settings.yaml:1", result.stdout)
+
+    def test_detects_multiline_xml_name_and_value_in_any_order(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repository = Path(temporary_directory)
+            self.initialize_repository(repository)
+            keys = ["api" + "Token", "pass" + "word"]
+            values = [secrets.token_urlsafe(24) for _ in range(2)]
+            (repository / "settings.xml").write_text(
+                "".join(
+                    [
+                        "<property\n",
+                        f'  value="{values[0]}"\n',
+                        f'  name="{keys[0]}"\n',
+                        "/>\n",
+                        "<property\n",
+                        f'  name="{keys[1]}"\n',
+                        f'  value="{values[1]}"\n',
+                        "/>\n",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            self.commit_all(repository, "multiline xml credentials")
+
+            result = self.run_scanner(repository, "--tree", check=False)
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("settings.xml:3", result.stdout)
+            self.assertIn("settings.xml:6", result.stdout)
+
+    def test_ignores_empty_env_values_and_nested_config_sections(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repository = Path(temporary_directory)
+            self.initialize_repository(repository)
+            empty_key = "JWT_ACCESS_" + "SECRET"
+            section_key = "detect-" + "secrets"
+            (repository / ".env.example").write_text(
+                f"{empty_key}=\nPUBLIC_URL=http://localhost\n", encoding="utf-8"
+            )
+            (repository / "workflow.yaml").write_text(
+                f"{section_key}:\n  name: Security check\n",
+                encoding="utf-8",
+            )
+            self.commit_all(repository, "empty and nested configuration")
+
+            result = self.run_scanner(repository, "--tree", check=False)
+
+            self.assertEqual(result.returncode, 0, result.stdout)
+
     def test_detects_supported_literal_forms_and_trailing_comments(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             repository = Path(temporary_directory)

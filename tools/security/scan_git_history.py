@@ -16,7 +16,12 @@ SENSITIVE_KEY = (
 )
 SENSITIVE_ASSIGNMENT = re.compile(
     rf"(?<![A-Za-z0-9_.-])[\"']?(?P<key>{SENSITIVE_KEY})[\"']?\s*"
-    r"(?::|(?<![=!<>])=(?!=))\s*",
+    r"(?::|(?<![=!<>])=(?!=))[ \t]*",
+    re.IGNORECASE,
+)
+SENSITIVE_MULTILINE_ASSIGNMENT = re.compile(
+    rf"(?<![A-Za-z0-9_.-])[\"']?(?P<key>{SENSITIVE_KEY})[\"']?\s*"
+    r"(?::|(?<![=!<>])=(?!=))[ \t]*(?:\r?\n[ \t]+)+",
     re.IGNORECASE,
 )
 URL_CREDENTIAL = re.compile(
@@ -25,14 +30,18 @@ URL_CREDENTIAL = re.compile(
     re.IGNORECASE,
 )
 XML_ELEMENT = re.compile(
-    rf"<(?P<key>{SENSITIVE_KEY})\b[^>]*>(?P<value>[^<]+)</[^>]+>",
-    re.IGNORECASE,
+    rf"<(?P<key>{SENSITIVE_KEY})\b[^>]*>(?P<value>.*?)</(?P=key)\s*>",
+    re.IGNORECASE | re.DOTALL,
 )
-XML_NAMED_VALUE = re.compile(
-    rf"\bname\s*=\s*(?P<name_quote>[\"'])(?P<key>{SENSITIVE_KEY})"
-    r"(?P=name_quote)[^>]*\bvalue\s*=\s*(?P<value_quote>[\"'])"
-    r"(?P<value>.*?)(?P=value_quote)",
-    re.IGNORECASE,
+XML_TAG = re.compile(
+    r"<(?![!?/])(?P<tag>[A-Za-z_:][A-Za-z0-9_.:-]*)\b"
+    r"(?P<attributes>[^<>]*?)/?>",
+    re.DOTALL,
+)
+XML_ATTRIBUTE = re.compile(
+    r"(?P<name>[A-Za-z_:][A-Za-z0-9_.:-]*)\s*=\s*"
+    r"(?P<quote>[\"'])(?P<value>.*?)(?P=quote)",
+    re.DOTALL,
 )
 ALLOWLIST_PRAGMA = "pragma: allowlist secret"
 DATABASE_SCHEMES = {
@@ -178,6 +187,18 @@ def extract_assigned_value(line: str, start: int) -> str:
     return remainder[:end]
 
 
+def bare_identifier_is_literal(path: str) -> bool:
+    return Path(path).suffix.lower() in {
+        ".conf",
+        ".env",
+        ".ini",
+        ".properties",
+        ".toml",
+        ".yaml",
+        ".yml",
+    }
+
+
 def pragma_is_allowed(path: str) -> bool:
     normalised_path = path.replace("\\", "/")
     return (
@@ -272,7 +293,7 @@ def inspect_line(
             continue
         literal = normalise_literal(
             raw_value,
-            bare_identifier_is_literal=Path(path).suffix.lower() == ".env",
+            bare_identifier_is_literal=bare_identifier_is_literal(path),
         )
         if literal and not is_validation_sentinel(path, literal):
             findings.append(
@@ -285,18 +306,103 @@ def inspect_line(
                 )
             )
 
-    for xml_pattern in (XML_ELEMENT, XML_NAMED_VALUE):
-        for xml_match in xml_pattern.finditer(line):
-            if normalise_literal(f'"{xml_match.group("value")}"'):
-                findings.append(
-                    Finding(
-                        path,
-                        line_number,
-                        "Generic credential literal assigned to "
-                        f"{xml_match.group('key')}",
-                        commit,
-                    )
+    return list(dict.fromkeys(findings))
+
+
+def line_at_offset(content: str, offset: int) -> int:
+    return content.count("\n", 0, offset) + 1
+
+
+def block_is_eligible(
+    start_line: int, end_line: int, eligible_lines: set[int] | None
+) -> bool:
+    if eligible_lines is None:
+        return True
+    return any(line in eligible_lines for line in range(start_line, end_line + 1))
+
+
+def inspect_content(
+    path: str,
+    content: str,
+    commit: str | None = None,
+    eligible_lines: set[int] | None = None,
+) -> list[Finding]:
+    findings: list[Finding] = []
+    for line_number, line in enumerate(content.splitlines(), start=1):
+        if eligible_lines is None or line_number in eligible_lines:
+            findings.extend(inspect_line(path, line_number, line, commit))
+
+    for assignment_match in SENSITIVE_MULTILINE_ASSIGNMENT.finditer(content):
+        key_line = line_at_offset(content, assignment_match.start("key"))
+        value_line = line_at_offset(content, assignment_match.end())
+        if key_line == value_line:
+            continue
+        if not credential_key_is_sensitive(assignment_match.group("key")):
+            continue
+        raw_value = extract_assigned_value(content, assignment_match.end())
+        if bare_identifier_is_literal(path) and raw_value.rstrip().endswith(":"):
+            continue
+        literal = normalise_literal(
+            raw_value,
+            bare_identifier_is_literal=bare_identifier_is_literal(path),
+        )
+        if not literal or is_validation_sentinel(path, literal):
+            continue
+        value_end_line = value_line + raw_value.count("\n")
+        if block_is_eligible(key_line, value_end_line, eligible_lines):
+            findings.append(
+                Finding(
+                    path,
+                    key_line,
+                    "Generic credential literal assigned to "
+                    f"{assignment_match.group('key')}",
+                    commit,
                 )
+            )
+
+    for element_match in XML_ELEMENT.finditer(content):
+        key_line = line_at_offset(content, element_match.start("key"))
+        end_line = line_at_offset(content, element_match.end())
+        if not block_is_eligible(key_line, end_line, eligible_lines):
+            continue
+        if normalise_literal(f'"{element_match.group("value")}"'):
+            findings.append(
+                Finding(
+                    path,
+                    key_line,
+                    "Generic credential literal assigned to "
+                    f"{element_match.group('key')}",
+                    commit,
+                )
+            )
+
+    for tag_match in XML_TAG.finditer(content):
+        attributes_start = tag_match.start("attributes")
+        attributes: dict[str, tuple[re.Match[str], str]] = {}
+        for attribute_match in XML_ATTRIBUTE.finditer(tag_match.group("attributes")):
+            attributes[attribute_match.group("name").lower()] = (
+                attribute_match,
+                attribute_match.group("value"),
+            )
+        if "name" not in attributes or "value" not in attributes:
+            continue
+        name_match, key = attributes["name"]
+        _value_match, value = attributes["value"]
+        if not re.fullmatch(SENSITIVE_KEY, key, re.IGNORECASE):
+            continue
+        if not credential_key_is_sensitive(key) or not normalise_literal(f'"{value}"'):
+            continue
+        key_line = line_at_offset(content, attributes_start + name_match.start())
+        end_line = line_at_offset(content, tag_match.end())
+        if block_is_eligible(key_line, end_line, eligible_lines):
+            findings.append(
+                Finding(
+                    path,
+                    key_line,
+                    f"Generic credential literal assigned to {key}",
+                    commit,
+                )
+            )
 
     return list(dict.fromkeys(findings))
 
@@ -314,10 +420,9 @@ def scan_tree(repository: Path) -> list[Finding]:
             continue
         if b"\0" in content:
             continue
-        for line_number, line in enumerate(
-            content.decode("utf-8", errors="replace").splitlines(), start=1
-        ):
-            findings.extend(inspect_line(relative_path, line_number, line))
+        findings.extend(
+            inspect_content(relative_path, content.decode("utf-8", errors="replace"))
+        )
     return findings
 
 
@@ -403,10 +508,14 @@ def scan_commit(repository: Path, commit: str) -> list[Finding]:
             )
         line_indexes = set.intersection(*changed_by_parent)
 
-        for line_index in sorted(line_indexes):
-            findings.extend(
-                inspect_line(path, line_index + 1, current_lines[line_index], commit)
+        findings.extend(
+            inspect_content(
+                path,
+                "\n".join(current_lines),
+                commit,
+                {line_index + 1 for line_index in line_indexes},
             )
+        )
     return list(dict.fromkeys(findings))
 
 
