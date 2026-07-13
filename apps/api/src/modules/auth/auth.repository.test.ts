@@ -62,6 +62,26 @@ function testHash(value: string) {
 }
 
 describe("AuthRepository refresh tokens", () => {
+  it("cria a raiz da familia com o mesmo identificador do token", async () => {
+    const values = vi.fn().mockResolvedValue([]);
+    const repository = new AuthRepository({
+      insert: vi.fn().mockReturnValue({ values }),
+    } as never);
+
+    const token = await repository.createRefreshToken(
+      "22222222-2222-4222-8222-222222222222",
+    );
+    const parsed = parseRefreshToken(token);
+
+    expect(parsed).not.toBeNull();
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        familyId: parsed?.selector,
+        id: parsed?.selector,
+      }),
+    );
+  });
+
   it("bloqueia apenas refresh_tokens antes de consultar a identidade", () => {
     const database = drizzle({} as never);
     const query = buildRefreshTokenLockQuery(

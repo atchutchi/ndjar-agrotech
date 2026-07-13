@@ -160,7 +160,6 @@ export class AuthRepository {
         .values({
           displayName: input.displayName,
           phoneNumberHash: input.identifierHash,
-          role: NDJAR_ROLES.farmer,
         })
         .returning({ id: users.id });
 
@@ -274,13 +273,12 @@ export class AuthRepository {
 
   async createRefreshToken(userId: string): Promise<string> {
     const token = newRefreshTokenParts();
-    const familyId = randomUUID();
 
     await this.requireDatabase()
       .insert(refreshTokens)
       .values({
         id: token.selector,
-        familyId,
+        familyId: token.selector,
         userId,
         tokenHash: await hash(token.secret),
         expiresAt: expiresInDays(30),

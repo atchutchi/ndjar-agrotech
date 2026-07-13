@@ -1,5 +1,5 @@
 import { AGRONOMIC_SOURCE_STATUSES } from "@ndjar/domain";
-import { getTableConfig } from "drizzle-orm/pg-core";
+import { getTableConfig, PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -26,6 +26,7 @@ import {
   userProfiles,
   userRoleEnum,
   userRoles,
+  users,
   verificationCodes,
 } from "./schema.js";
 
@@ -107,6 +108,7 @@ describe("production auth schema", () => {
 
   it("persiste familias e cadeia de rotacao dos refresh tokens", () => {
     const config = getTableConfig(refreshTokens);
+    const dialect = new PgDialect();
 
     expect(refreshTokens).toHaveProperty("familyId");
     expect(refreshTokens).toHaveProperty("parentTokenId");
@@ -123,12 +125,45 @@ describe("production auth schema", () => {
         const reference = foreignKey.reference();
         return (
           reference.columns.map((column) => column.name).join(",") ===
-            "parent_token_id" &&
+            "parent_token_id,family_id" &&
+          reference.foreignColumns.map((column) => column.name).join(",") ===
+            "id,family_id"
+        );
+      }),
+    ).toBe(true);
+    expect(
+      config.foreignKeys.some((foreignKey) => {
+        const reference = foreignKey.reference();
+        return (
+          reference.columns.map((column) => column.name).join(",") ===
+            "family_id" &&
           reference.foreignColumns.map((column) => column.name).join(",") ===
             "id"
         );
       }),
     ).toBe(true);
+    expect(
+      config.indexes.some(
+        (index) =>
+          index.config.unique &&
+          index.config.columns
+            .map((column) => ("name" in column ? column.name : undefined))
+            .join(",") === "id,family_id",
+      ),
+    ).toBe(true);
+    expect(
+      config.checks.some((constraint) =>
+        dialect
+          .sqlToQuery(constraint.value)
+          .sql.includes(
+            '"parent_token_id" is not null or "refresh_tokens"."family_id" = "refresh_tokens"."id"',
+          ),
+      ),
+    ).toBe(true);
+  });
+
+  it("uses user_roles as the only persisted role authority", () => {
+    expect(users).not.toHaveProperty("role");
   });
 
   it("indexa pesquisas operacionais de autenticacao", () => {

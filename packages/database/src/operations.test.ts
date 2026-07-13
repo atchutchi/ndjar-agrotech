@@ -117,4 +117,32 @@ describe("database operations", () => {
     );
     expect(migration).toContain("prevent_agronomic_source_mutation");
   });
+
+  it("migrates legacy roles and refresh families before enforcing constraints", () => {
+    const migration = readFileSync(
+      resolve(
+        import.meta.dirname,
+        "../drizzle/0004_identity_refresh_integrity.sql",
+      ),
+      "utf8",
+    );
+    const copyLegacyRoles = migration.indexOf('INSERT INTO "user_roles"');
+    const dropLegacyRole = migration.indexOf('DROP COLUMN "role"');
+    const normalizeFamilies = migration.indexOf("normalized_refresh_families");
+    const familyForeignKey = migration.indexOf(
+      'ADD CONSTRAINT "refresh_tokens_family_root_fk"',
+    );
+    const familyUnique = migration.indexOf(
+      'CREATE UNIQUE INDEX "refresh_tokens_id_family_id_unique"',
+    );
+    const parentFamilyForeignKey = migration.indexOf(
+      'ADD CONSTRAINT "refresh_tokens_parent_family_fk"',
+    );
+
+    expect(copyLegacyRoles).toBeGreaterThanOrEqual(0);
+    expect(copyLegacyRoles).toBeLessThan(dropLegacyRole);
+    expect(normalizeFamilies).toBeGreaterThanOrEqual(0);
+    expect(normalizeFamilies).toBeLessThan(familyForeignKey);
+    expect(familyUnique).toBeLessThan(parentFamilyForeignKey);
+  });
 });

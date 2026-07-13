@@ -216,7 +216,6 @@ function agronomicSourceColumn() {
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   displayName: text("display_name"),
-  role: userRoleEnum("role").default("farmer").notNull(),
   preferredChannel: userChannelEnum("preferred_channel")
     .default("mobile")
     .notNull(),
@@ -746,10 +745,23 @@ export const refreshTokens = pgTable(
   },
   (table) => [
     foreignKey({
-      columns: [table.parentTokenId],
+      columns: [table.familyId],
       foreignColumns: [table.id],
-      name: "refresh_tokens_parent_token_fk",
+      name: "refresh_tokens_family_root_fk",
     }),
+    foreignKey({
+      columns: [table.parentTokenId, table.familyId],
+      foreignColumns: [table.id, table.familyId],
+      name: "refresh_tokens_parent_family_fk",
+    }),
+    check(
+      "refresh_tokens_root_family_coherence",
+      sql`${table.parentTokenId} is not null or ${table.familyId} = ${table.id}`,
+    ),
+    uniqueIndex("refresh_tokens_id_family_id_unique").on(
+      table.id,
+      table.familyId,
+    ),
     index("refresh_tokens_family_id_idx").on(table.familyId),
     index("refresh_tokens_user_id_idx").on(table.userId),
   ],
