@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { canAccessAdmin, NDJAR_ROLES, type NdjarRole } from "@ndjar/domain";
 
 export const ADMIN_ACCESS_COOKIE = "ndjar_admin_access";
 export const ADMIN_ACCESS_MAX_AGE = 60 * 15;
@@ -20,7 +21,14 @@ function hasRoles(value: unknown): value is { roles: string[] } {
 }
 
 export function hasAdminRole(value: unknown): value is AdminSession {
-  return hasRoles(value) && value.roles.includes("admin");
+  if (!hasRoles(value)) {
+    return false;
+  }
+
+  const knownRoles = value.roles.filter((role): role is NdjarRole =>
+    Object.values(NDJAR_ROLES).includes(role as NdjarRole),
+  );
+  return canAccessAdmin(knownRoles);
 }
 
 export function isAdminLoginSession(

@@ -1,6 +1,24 @@
 import React from "react";
 
-export default function AdminLoginPage() {
+const errorMessages = {
+  invalid: "Credenciais inválidas. Confirma os dados e tenta novamente.",
+  session: "A sessão terminou. Inicia sessão novamente.",
+} as const;
+
+interface AdminLoginPageProps {
+  searchParams?: Promise<{ error?: string | string[] }>;
+}
+
+export default async function AdminLoginPage({
+  searchParams,
+}: AdminLoginPageProps) {
+  const error = (await searchParams)?.error;
+  const errorCode = Array.isArray(error) ? error[0] : error;
+  const errorMessage =
+    errorCode && errorCode in errorMessages
+      ? errorMessages[errorCode as keyof typeof errorMessages]
+      : null;
+
   return (
     <main className="admin-login">
       <section
@@ -9,6 +27,11 @@ export default function AdminLoginPage() {
       >
         <p className="eyebrow">Acesso protegido</p>
         <h1 id="admin-login-title">Entrar no N'djar Admin</h1>
+        {errorMessage ? (
+          <p className="admin-login-error" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
         <form action="/api/admin/login" method="post">
           <label>
             Telefone ou email

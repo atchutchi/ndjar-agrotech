@@ -1,60 +1,64 @@
 import { randomUUID } from "node:crypto";
-import { redirect } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const cookieStore = {
-  set: vi.fn(),
-};
-
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(async () => cookieStore),
-}));
-
-vi.mock("next/navigation", () => ({
-  redirect: vi.fn((destination: string) => {
-    throw new Error(`redirect:${destination}`);
-  }),
-}));
 
 import { POST } from "./route";
 
-function loginRequest() {
+function loginRequest(origin = "https://admin.example.test") {
   const formData = new FormData();
   formData.set("identifier", "admin@example.test");
   formData.set("password", randomUUID());
 
   return new Request("https://admin.example.test/api/admin/login", {
     body: formData,
+    headers: { origin },
     method: "POST",
   });
 }
 
 describe("POST /api/admin/login", () => {
   beforeEach(() => {
-    cookieStore.set.mockReset();
-    vi.mocked(redirect).mockClear();
     vi.unstubAllGlobals();
     process.env.NDJAR_API_URL = "https://api.example.test";
   });
 
-  it("cria a sessão e redirecciona quando o utilizador tem o papel admin", async () => {
+  it("cria a sessão e responde com 303 para o papel admin", async () => {
     const accessToken = randomUUID();
-    const fetchMock = vi.fn(async () =>
-      Response.json({ accessToken, user: { roles: ["admin"] } }),
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({ accessToken, user: { roles: ["admin"] } }),
+      ),
     );
-    vi.stubGlobal("fetch", fetchMock);
 
-    await expect(POST(loginRequest())).rejects.toThrow("redirect:/admin");
+    const response = await POST(loginRequest());
 
-    expect(cookieStore.set).toHaveBeenCalledWith(
-      "ndjar_admin_access",
-      accessToken,
-      expect.objectContaining({
-        httpOnly: true,
-        maxAge: 60 * 15,
-        path: "/",
-        sameSite: "lax",
-      }),
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "https://admin.example.test/admin",
+    );
+    expect(response.headers.get("set-cookie")).toContain(
+      `ndjar_admin_access=${accessToken}`,
+    );
+    expect(response.headers.get("set-cookie")).toContain("HttpOnly");
+    expect(response.headers.get("set-cookie")).toContain("SameSite=lax");
+  });
+
+  it("aceita a política central para o papel super_admin", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          accessToken: randomUUID(),
+          user: { roles: ["super_admin"] },
+        }),
+      ),
+    );
+
+    const response = await POST(loginRequest());
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "https://admin.example.test/admin",
     );
   });
 
@@ -64,15 +68,16 @@ describe("POST /api/admin/login", () => {
       vi.fn(async () => new Response(null, { status: 401 })),
     );
 
-    await expect(POST(loginRequest())).rejects.toThrow(
-      "redirect:/admin/login?error=invalid",
-    );
+    const response = await POST(loginRequest());
 
-    expect(cookieStore.set).not.toHaveBeenCalled();
-    expect(redirect).toHaveBeenCalledTimes(1);
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "https://admin.example.test/admin/login?error=invalid",
+    );
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
-  it("não cria sessão quando o utilizador não tem o papel admin", async () => {
+  it("não cria sessão quando o utilizador não tem acesso administrativo", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
@@ -83,11 +88,10 @@ describe("POST /api/admin/login", () => {
       ),
     );
 
-    await expect(POST(loginRequest())).rejects.toThrow(
-      "redirect:/admin/login?error=invalid",
-    );
+    const response = await POST(loginRequest());
 
-    expect(cookieStore.set).not.toHaveBeenCalled();
+    expect(response.status).toBe(303);
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
   it("não cria sessão quando a API devolve JSON inválido", async () => {
@@ -101,11 +105,10 @@ describe("POST /api/admin/login", () => {
       ),
     );
 
-    await expect(POST(loginRequest())).rejects.toThrow(
-      "redirect:/admin/login?error=invalid",
-    );
+    const response = await POST(loginRequest());
 
-    expect(cookieStore.set).not.toHaveBeenCalled();
+    expect(response.status).toBe(303);
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
   it("falha fechada quando falta a configuração da API", async () => {
@@ -113,13 +116,11 @@ describe("POST /api/admin/login", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(POST(loginRequest())).rejects.toThrow(
-      "redirect:/admin/login?error=invalid",
-    );
+    const response = await POST(loginRequest());
 
+    expect(response.status).toBe(303);
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(cookieStore.set).not.toHaveBeenCalled();
-    expect(redirect).toHaveBeenCalledTimes(1);
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
   it("falha fechada quando a API não está disponível", async () => {
@@ -130,11 +131,26 @@ describe("POST /api/admin/login", () => {
       }),
     );
 
-    await expect(POST(loginRequest())).rejects.toThrow(
-      "redirect:/admin/login?error=invalid",
-    );
+    const response = await POST(loginRequest());
 
-    expect(cookieStore.set).not.toHaveBeenCalled();
-    expect(redirect).toHaveBeenCalledTimes(1);
+    expect(response.status).toBe(303);
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
+  it.each([
+    ["origem ausente", undefined],
+    ["origem diferente", "https://malicious.example.test"],
+  ])("recusa %s antes de contactar a API", async (_scenario, origin) => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const request = loginRequest(origin);
+    if (origin === undefined) {
+      request.headers.delete("origin");
+    }
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(403);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

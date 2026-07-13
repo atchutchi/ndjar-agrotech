@@ -5,3 +5,11 @@ repos:
     hooks:
       - id: detect-secrets
         exclude: ^pnpm-lock\.yaml$
+      - id: detect-secrets
+        name: Detect secret keywords in pnpm lockfile
+        files: ^pnpm-lock\.yaml$
+        args:
+          - --disable-plugin
+          - Base64HighEntropyString
+          - --disable-plugin
+          - HexHighEntropyString

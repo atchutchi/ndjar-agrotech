@@ -1,4 +1,5 @@
 .github/CODEOWNERS @atchutchi
+.github/workflows/** @atchutchi
 .github/workflows/secret-scan.yml @atchutchi
 .github/workflows/secret-scan-trusted.yml @atchutchi
 .github/workflows/*secret*.yml @atchutchi

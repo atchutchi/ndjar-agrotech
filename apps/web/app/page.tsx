@@ -1,4 +1,5 @@
 import Link from "next/link";
+import React from "react";
 
 import { buildPilotOverview } from "../lib/pilot-summary";
 
@@ -35,7 +36,7 @@ const serviceCards = [
 const mvpStates = [
   "Dados locais carregados por fixtures",
   "Sem dependência de base de dados real",
-  "Admin ainda sem autenticação",
+  "Admin com autenticação protegida",
   "Recomendações dependem de validação técnica",
 ];
 

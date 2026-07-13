@@ -260,23 +260,27 @@ Enable the pinned package manager and install the locked workspace dependencies:
 ```powershell
 corepack enable
 corepack pnpm install --frozen-lockfile
-Copy-Item .env.example .env
 ```
 
-The local environment contract is:
+The root `.env.example` documents the environment contract. The API does not load that file automatically. Define API variables in the same terminal that starts the process. `NDJAR_DATABASE_MODE=fixture` disables the database provider, so it is only suitable for fixture-backed routes. It cannot provide real login or entitlements.
 
-```dotenv
-DATABASE_URL=
-NDJAR_DATABASE_MODE=fixture
-JWT_ACCESS_SECRET=
-NDJAR_API_URL=http://localhost:3333
-```
-
-`NDJAR_DATABASE_MODE=fixture` lets the API start without a database for fixture-backed routes. Real login and real entitlements require PostgreSQL, a non-empty `DATABASE_URL` and the schema applied.
-
-Keep `JWT_ACCESS_SECRET` empty in `.env`. Generate it only for the current PowerShell process. This command uses `RandomNumberGenerator`, does not print a secret and does not write one to disk:
+Fixture API terminal:
 
 ```powershell
+$env:NDJAR_DATABASE_MODE = "fixture"
+Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+Remove-Item Env:JWT_ACCESS_SECRET -ErrorAction SilentlyContinue
+corepack pnpm --filter @ndjar/api dev
+```
+
+Real authentication requires PostgreSQL with PostGIS, the schema applied, a non-empty `DATABASE_URL`, `NDJAR_DATABASE_MODE=postgres` and a runtime-generated JWT secret. Do not write those values to a tracked file.
+
+PostgreSQL API terminal:
+
+```powershell
+$env:NDJAR_DATABASE_MODE = "postgres"
+$env:DATABASE_URL = Read-Host "DATABASE_URL"
+
 function New-NdjarRuntimeSecret {
   $bytes = [byte[]]::new(48)
   [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
@@ -284,16 +288,21 @@ function New-NdjarRuntimeSecret {
 }
 $env:JWT_ACCESS_SECRET = New-NdjarRuntimeSecret
 Remove-Item function:New-NdjarRuntimeSecret
+
+corepack pnpm --filter @ndjar/database exec drizzle-kit push
+corepack pnpm --filter @ndjar/api dev
 ```
 
 Refresh tokens are opaque values generated randomly by the API. The database persists only their hash, so there is no `JWT_REFRESH_SECRET` environment variable.
 
-Run the API and web applications in separate terminals after setting their required runtime environment:
+The Next.js application loads package-local environment files. Prepare `apps/web/.env.local` from its non-secret example and start the web application in a separate terminal:
 
 ```powershell
-corepack pnpm --filter @ndjar/api dev
+Copy-Item apps/web/.env.example apps/web/.env.local
 corepack pnpm --filter @ndjar/web dev
 ```
+
+See `docs/environment/local-development.md` for the complete local environment procedure. Production must use versioned database migrations rather than `drizzle-kit push`.
 
 ## Testing
 
@@ -371,7 +380,7 @@ The highest-risk tests protect:
 
 Secret scanning is active through `detect-secrets` locally and in GitHub Actions. Do not add real credentials, fixed example passwords or generated JWT values to tracked files. GitGuardian remains an external independent check.
 
-The trusted secret-scan workflow is designed to read its configuration from the protected base branch. Branch protection is an external repository setting and still needs to require that check and CODEOWNERS review. The pinned `pre-commit/action` has transitive dependencies that remain mutable at the provider layer. This is a recorded supply-chain concern; the workflow is not restructured here.
+The normal secret-scan workflow runs on pushes. Pull requests use the trusted workflow, which reads its configuration from the protected base branch and never executes repository code. Every checkout disables credential persistence. Branch protection is an external repository setting and still needs to require the trusted check and CODEOWNERS review. The pinned `pre-commit/action` has transitive dependencies that remain mutable at the provider layer.
 
 ## Feature Troubleshooting
 

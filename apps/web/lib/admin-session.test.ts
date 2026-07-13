@@ -35,6 +35,19 @@ describe("getVerifiedAdminSession", () => {
     });
   });
 
+  it("aceita uma sessão validada pela política central para super_admin", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({ id: randomUUID(), roles: ["super_admin"] }),
+      ),
+    );
+
+    await expect(getVerifiedAdminSession()).resolves.toEqual(
+      expect.objectContaining({ roles: ["super_admin"] }),
+    );
+  });
+
   it.each([
     ["token inválido", new Response(null, { status: 401 })],
     ["papel insuficiente", Response.json({ roles: ["consultant"] })],

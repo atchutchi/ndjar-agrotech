@@ -1,13 +1,21 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 
+import { isSameOriginRequest } from "../../../../lib/admin-origin";
 import {
   ADMIN_ACCESS_COOKIE,
   ADMIN_ACCESS_MAX_AGE,
   isAdminLoginSession,
 } from "../../../../lib/admin-session";
 
+function redirectTo(request: Request, path: string) {
+  return NextResponse.redirect(new URL(path, request.url), 303);
+}
+
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) {
+    return NextResponse.json({ error: "origin_not_allowed" }, { status: 403 });
+  }
+
   const formData = await request.formData();
   const identifier = String(formData.get("identifier") ?? "");
   const password = String(formData.get("password") ?? "");
@@ -34,17 +42,16 @@ export async function POST(request: Request) {
   } catch {}
 
   if (!session) {
-    redirect("/admin/login?error=invalid");
+    return redirectTo(request, "/admin/login?error=invalid");
   }
 
-  const cookieStore = await cookies();
-  cookieStore.set(ADMIN_ACCESS_COOKIE, session.accessToken, {
+  const response = redirectTo(request, "/admin");
+  response.cookies.set(ADMIN_ACCESS_COOKIE, session.accessToken, {
     httpOnly: true,
     maxAge: ADMIN_ACCESS_MAX_AGE,
     path: "/",
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   });
-
-  redirect("/admin");
+  return response;
 }

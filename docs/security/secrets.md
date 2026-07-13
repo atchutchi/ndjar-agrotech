@@ -18,7 +18,15 @@ Depois de autenticar o ggshield com a chave de API apropriada, pode activar-se a
 
 Proteccao de pull requests
 
-O scan normal corre em push e pull_request. O scan confiavel corre em pull_request_target com a configuracao copiada da base protegida antes de obter o conteudo do PR. pull_request_target nunca pode executar scripts, package managers ou codigo do PR. A proteccao da branch deve exigir o check confiavel e a revisao CODEOWNERS destes ficheiros. GitGuardian continua activo como verificacao externa independente.
+O scan normal corre apenas em push. O scan de pull requests corre em pull_request_target com a configuracao copiada da base protegida antes de obter o conteudo do PR. pull_request_target nunca pode executar scripts, package managers ou codigo do PR. Todos os checkouts desactivam a persistencia de credenciais. A proteccao da branch deve exigir o check confiavel e a revisao CODEOWNERS de todos os workflows. GitGuardian continua activo como verificacao externa independente.
+
+Lockfile
+
+O primeiro hook exclui pnpm-lock.yaml para evitar milhares de falsos positivos nos hashes de integridade. Um segundo hook analisa apenas esse ficheiro com os detectores de entropia desactivados. Os restantes detectores continuam activos e podem detectar chaves, tokens e palavras-passe associados a nomes sensiveis.
+
+Pedidos administrativos
+
+Os handlers de login e logout aceitam apenas pedidos POST cuja origem coincide com a origem publica do pedido. Esta verificacao complementa o cookie SameSite. Deve manter-se quando forem adicionadas mutacoes administrativas.
 
 Segredo real
 
