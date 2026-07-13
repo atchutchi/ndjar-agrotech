@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-
 function readPackageJson(path: string): { scripts: Record<string, string> } {
   return JSON.parse(readFileSync(path, "utf8")) as {
     scripts: Record<string, string>;
@@ -25,6 +24,16 @@ describe("database operations", () => {
     });
   });
 
+  it("does not fall back to an implicit database for migrations", () => {
+    const config = readFileSync(
+      resolve(import.meta.dirname, "../drizzle.config.ts"),
+      "utf8",
+    );
+
+    expect(config).not.toContain("postgres://localhost");
+    expect(config).toContain("DATABASE_URL is required");
+  });
+
   it("enables PostGIS in the first migration", () => {
     const migration = readFileSync(
       resolve(import.meta.dirname, "../drizzle/0000_initial_schema.sql"),
@@ -32,8 +41,8 @@ describe("database operations", () => {
     );
 
     expect(migration).toContain("CREATE EXTENSION IF NOT EXISTS postgis");
-    expect(migration.indexOf("CREATE EXTENSION IF NOT EXISTS postgis")).toBeLessThan(
-      migration.indexOf("CREATE TABLE"),
-    );
+    expect(
+      migration.indexOf("CREATE EXTENSION IF NOT EXISTS postgis"),
+    ).toBeLessThan(migration.indexOf("CREATE TABLE"));
   });
 });

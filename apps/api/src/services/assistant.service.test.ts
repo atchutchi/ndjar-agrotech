@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { AssistantService } from "./assistant.service.js";
 
 describe("AssistantService reviewed templates", () => {
-  it("returns traceable review metadata with a deterministic answer", () => {
+  it("escalates when no formally persisted review is available", () => {
     const result = new AssistantService().answerQuestion({
       channel: "mobile",
       language: "pt",
@@ -11,11 +11,11 @@ describe("AssistantService reviewed templates", () => {
     });
 
     expect(result).toMatchObject({
-      answerType: "deterministic_template",
-      review: {
-        reviewedAt: expect.any(String),
-        reviewedByUserId: expect.any(String),
-        templateId: "soil-ph-basic",
+      answerType: "pending_review",
+      consultationStatus: "pending_review",
+      decision: {
+        reason: "no_safe_answer",
+        shouldEscalate: true,
       },
     });
   });

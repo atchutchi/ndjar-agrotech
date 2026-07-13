@@ -91,7 +91,7 @@ describe("API foundation", () => {
     expect(Date.parse(response.body.escalation.dueAt)).not.toBeNaN();
   });
 
-  it("answers simple reviewed questions with a deterministic template", async () => {
+  it("escalates simple questions until a formally reviewed template exists", async () => {
     const response = await request(app.getHttpServer())
       .post("/assistant/ask")
       .send({
@@ -101,13 +101,12 @@ describe("API foundation", () => {
 
     expect(response.status).toBe(201);
     expect(response.body).toMatchObject({
-      answerType: "deterministic_template",
-      status: "answered_by_template",
-      source: "local_reviewed_template",
-      templateId: "soil-ph-basic",
+      answerType: "pending_review",
+      status: "escalated",
+      source: "domain_escalation_rule",
       decision: {
-        shouldEscalate: false,
-        reason: "reviewed_answer_available",
+        shouldEscalate: true,
+        reason: "no_safe_answer",
       },
     });
   });
