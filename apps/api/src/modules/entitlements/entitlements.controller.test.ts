@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthGuard } from "../auth/auth.guard.js";
@@ -8,25 +9,6 @@ import { EntitlementsService } from "./entitlements.service.js";
 
 const now = new Date("2026-07-13T12:00:00.000Z");
 const guardsMetadata = "__guards__";
-
-function queryIncludesValue(query: unknown, value: string) {
-  if (
-    typeof query !== "object" ||
-    query === null ||
-    !("queryChunks" in query) ||
-    !Array.isArray(query.queryChunks)
-  ) {
-    return false;
-  }
-
-  return query.queryChunks.some(
-    (chunk) =>
-      typeof chunk === "object" &&
-      chunk !== null &&
-      "value" in chunk &&
-      chunk.value === value,
-  );
-}
 
 const emptyResponse = {
   features: {
@@ -171,7 +153,7 @@ describe("EntitlementsService", () => {
 });
 
 describe("EntitlementsRepository", () => {
-  it("consulta apenas o utilizador pedido e devolve a subscricao mais recente", async () => {
+  it("consulta o utilizador pedido e ordena a subscricao mais recente", async () => {
     const entitlementWhere = vi.fn().mockResolvedValue([
       {
         active: true,
@@ -218,15 +200,36 @@ describe("EntitlementsRepository", () => {
         status: "active",
       },
     });
-    expect(entitlementWhere).toHaveBeenCalledOnce();
-    expect(subscriptionWhere).toHaveBeenCalledOnce();
-    expect(
-      queryIncludesValue(entitlementWhere.mock.calls[0]?.[0], "user-1"),
-    ).toBe(true);
-    expect(
-      queryIncludesValue(subscriptionWhere.mock.calls[0]?.[0], "user-1"),
-    ).toBe(true);
-    expect(orderBy).toHaveBeenCalledOnce();
+    const dialect = new PgDialect();
+    const entitlementQuery = dialect.sqlToQuery(
+      entitlementWhere.mock.calls[0]?.[0] as never,
+    );
+    const subscriptionQuery = dialect.sqlToQuery(
+      subscriptionWhere.mock.calls[0]?.[0] as never,
+    );
+    const subscriptionOrder = orderBy.mock.calls[0]?.map(
+      (expression) => dialect.sqlToQuery(expression as never).sql,
+    );
+
+    expect({
+      params: entitlementQuery.params,
+      sql: entitlementQuery.sql,
+    }).toEqual({
+      params: ["user-1"],
+      sql: '"entitlements"."user_id" = $1',
+    });
+    expect({
+      params: subscriptionQuery.params,
+      sql: subscriptionQuery.sql,
+    }).toEqual({
+      params: ["user-1"],
+      sql: '"subscriptions"."user_id" = $1',
+    });
+    expect(subscriptionOrder).toEqual([
+      '"subscriptions"."starts_at" desc',
+      '"subscriptions"."created_at" desc',
+      '"subscriptions"."id" desc',
+    ]);
     expect(limit).toHaveBeenCalledWith(1);
   });
 

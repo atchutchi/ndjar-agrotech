@@ -53,6 +53,10 @@ const validRefreshTokenSelector = "01234567-89ab-4cde-8f01-23456789abcd";
 const validRefreshTokenSecret = randomBytes(48).toString("base64url");
 const validRefreshToken = `${validRefreshTokenSelector}.${validRefreshTokenSecret}`;
 
+function testHash(value: string) {
+  return hash(value, { memoryCost: 8, parallelism: 1, timeCost: 1 });
+}
+
 describe("AuthRepository refresh tokens", () => {
   it("extrai apenas selector UUID canonico e segredo base64url no formato emitido", () => {
     expect(parseRefreshToken(validRefreshToken)).toEqual({
@@ -118,8 +122,8 @@ describe("AuthRepository refresh tokens", () => {
         defaultRole: "farmer",
         displayName: "Binta Cisse",
         id: "user-1",
-        passwordHash: await hash(randomBytes(32).toString("base64url")),
-        refreshTokenHash: await hash(validRefreshTokenSecret),
+        passwordHash: await testHash(randomBytes(32).toString("base64url")),
+        refreshTokenHash: await testHash(validRefreshTokenSecret),
         refreshTokenId: validRefreshTokenSelector,
         roleId: "farmer",
       },
@@ -146,8 +150,8 @@ describe("AuthRepository refresh tokens", () => {
         defaultRole: "farmer",
         displayName: "Binta Cisse",
         id: "user-1",
-        passwordHash: await hash(randomBytes(32).toString("base64url")),
-        refreshTokenHash: await hash(validRefreshTokenSecret),
+        passwordHash: await testHash(randomBytes(32).toString("base64url")),
+        refreshTokenHash: await testHash(validRefreshTokenSecret),
         refreshTokenId: validRefreshTokenSelector,
         roleId: "farmer",
       },
@@ -195,7 +199,7 @@ describe("AuthRepository verification codes", () => {
     const select = selectChain([
       {
         attempts: 0,
-        codeHash: await hash("123456"),
+        codeHash: await testHash("123456"),
         id: "code-1",
       },
     ]);
@@ -231,7 +235,7 @@ describe("AuthRepository verification codes", () => {
     vi.spyOn(repository, "findByIdentifierHash").mockResolvedValue({
       displayName: "Binta Cisse",
       id: "user-1",
-      passwordHash: await hash(randomBytes(32).toString("base64url")),
+      passwordHash: await testHash(randomBytes(32).toString("base64url")),
       roles: ["farmer"],
     });
 
@@ -254,7 +258,7 @@ describe("AuthRepository verification codes", () => {
     const select = selectChain([
       {
         attempts: 0,
-        codeHash: await hash("123456"),
+        codeHash: await testHash("123456"),
         id: "code-1",
         userId: "user-1",
       },
@@ -273,7 +277,7 @@ describe("AuthRepository verification codes", () => {
       repositoryWithTransaction(tx).resetPassword({
         code: "123456",
         identifierHash: "identifier-hash",
-        passwordHash: await hash(randomBytes(32).toString("base64url")),
+        passwordHash: await testHash(randomBytes(32).toString("base64url")),
       }),
     ).resolves.toBe(true);
 
@@ -285,7 +289,7 @@ describe("AuthRepository verification codes", () => {
     const select = selectChain([
       {
         attempts: 0,
-        codeHash: await hash("123456"),
+        codeHash: await testHash("123456"),
         id: "code-1",
         userId: "user-1",
       },
@@ -300,7 +304,7 @@ describe("AuthRepository verification codes", () => {
       repositoryWithTransaction(tx).resetPassword({
         code: "000000",
         identifierHash: "identifier-hash",
-        passwordHash: await hash(randomBytes(32).toString("base64url")),
+        passwordHash: await testHash(randomBytes(32).toString("base64url")),
       }),
     ).resolves.toBe(false);
 
