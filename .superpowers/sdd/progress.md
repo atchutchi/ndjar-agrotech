@@ -15,3 +15,4 @@ Started: 2026-07-10
 Production foundation Task 1: complete (commits ed62c44..b272fd6, review clean after fix)
 Production foundation Task 2: complete (commits b272fd6..ce0dfa4, review clean after type-contract fix)
 Production foundation Task 3: complete (commits ce0dfa4..d537061, review approved; minors: clean task-3 report fixture block before final review, restore NDJAR_DATABASE_MODE in database module test)
+Production foundation Task 4: complete (commits 9ae2c70..0595560, review clean after auth guard and disabled-account refresh fixes)
