@@ -207,6 +207,35 @@ describe("database operations", () => {
     expect(compositeUnique).toBeLessThan(compositeParentForeignKey);
   });
 
+  it("prevents overlapping valid subscriptions for the same user and plan", () => {
+    const migration = readFileSync(
+      resolve(
+        import.meta.dirname,
+        "../drizzle/0008_subscription_overlap.sql",
+      ),
+      "utf8",
+    );
+    const extension = migration.indexOf(
+      "CREATE EXTENSION IF NOT EXISTS btree_gist",
+    );
+    const preflight = migration.indexOf(
+      'current_subscription."id" < candidate."id"',
+    );
+    const exclusion = migration.indexOf(
+      'ADD CONSTRAINT "subscriptions_no_active_plan_overlap" EXCLUDE USING gist',
+    );
+
+    expect(extension).toBeGreaterThanOrEqual(0);
+    expect(preflight).toBeGreaterThan(extension);
+    expect(migration).toContain(
+      "tstzrange(current_subscription.\"starts_at\", current_subscription.\"expires_at\", '[)') &&",
+    );
+    expect(migration).toContain(
+      "WHERE (\"status\" IN ('active', 'trial'))",
+    );
+    expect(exclusion).toBeGreaterThan(preflight);
+  });
+
   it("migrates versioned seed manifests", () => {
     const migration = readFileSync(
       resolve(import.meta.dirname, "../drizzle/0005_seed_manifests.sql"),

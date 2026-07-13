@@ -237,6 +237,21 @@ describe("production auth schema", () => {
     ).toBe(true);
   });
 
+  it("requires subscription periods to be positive", () => {
+    const config = getTableConfig(subscriptions);
+    const dialect = new PgDialect();
+
+    expect(
+      config.checks.some((constraint) =>
+        dialect
+          .sqlToQuery(constraint.value)
+          .sql.includes(
+            '"subscriptions"."starts_at" < "subscriptions"."expires_at"',
+          ),
+      ),
+    ).toBe(true);
+  });
+
   it("requires metadata for payment attempts and audit logs", () => {
     expect(paymentAttempts.metadata.notNull).toBe(true);
     expect(auditLogs.metadata.notNull).toBe(true);

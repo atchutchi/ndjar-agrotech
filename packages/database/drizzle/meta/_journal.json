@@ -57,6 +57,13 @@
       "when": 1783956260252,
       "tag": "0007_refresh_user_integrity",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783956394208,
+      "tag": "0008_subscription_overlap",
+      "breakpoints": true
     }
   ]
 }

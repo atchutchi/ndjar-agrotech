@@ -843,6 +843,10 @@ export const subscriptions = pgTable(
     ...timestampColumns(),
   },
   (table) => [
+    check(
+      "subscriptions_positive_period",
+      sql`${table.startsAt} < ${table.expiresAt}`,
+    ),
     uniqueIndex("subscriptions_id_user_id_unique").on(table.id, table.userId),
     index("subscriptions_user_status_validity_idx").on(
       table.userId,
