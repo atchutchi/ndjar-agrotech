@@ -1,8 +1,10 @@
-import { UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
+import type { Reflector } from "@nestjs/core";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { AuthGuard } from "./auth.guard.js";
 import { signAccessToken } from "./auth.tokens.js";
+import { ROLES_KEY, Roles, RolesGuard } from "./roles.guard.js";
 
 describe("AuthGuard", () => {
   beforeEach(() => {
@@ -43,13 +45,73 @@ describe("AuthGuard", () => {
   });
 });
 
+describe("RolesGuard", () => {
+  it("permite o pedido quando a rota nao exige papeis", () => {
+    const reflector = reflectorWithRequiredRoles(undefined);
+
+    expect(
+      new RolesGuard(reflector).canActivate(requestContext({ headers: {} })),
+    ).toBe(true);
+  });
+
+  it("permite o pedido quando o utilizador tem um dos papeis exigidos", () => {
+    const reflector = reflectorWithRequiredRoles(["admin", "technician"]);
+
+    expect(
+      new RolesGuard(reflector).canActivate(
+        requestContext({
+          headers: {},
+          user: { roles: ["farmer", "technician"] },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejeita o pedido quando o utilizador nao tem um papel exigido", () => {
+    const reflector = reflectorWithRequiredRoles(["admin"]);
+
+    expect(() =>
+      new RolesGuard(reflector).canActivate(
+        requestContext({ headers: {}, user: { roles: ["farmer"] } }),
+      ),
+    ).toThrow(new ForbiddenException("Permissão insuficiente"));
+  });
+
+  it("rejeita o pedido protegido sem utilizador autenticado", () => {
+    const reflector = reflectorWithRequiredRoles(["admin"]);
+
+    expect(() =>
+      new RolesGuard(reflector).canActivate(requestContext({ headers: {} })),
+    ).toThrow(new ForbiddenException("Permissão insuficiente"));
+  });
+
+  it("guarda os papeis exigidos como metadata", () => {
+    class ProtectedController {}
+
+    Roles("admin", "technician")(ProtectedController);
+
+    expect(Reflect.getMetadata(ROLES_KEY, ProtectedController)).toEqual([
+      "admin",
+      "technician",
+    ]);
+  });
+});
+
 function requestContext(request: {
   headers: Record<string, string>;
   user?: unknown;
 }) {
   return {
+    getClass: () => undefined,
+    getHandler: () => undefined,
     switchToHttp: () => ({
       getRequest: () => request,
     }),
   } as never;
+}
+
+function reflectorWithRequiredRoles(requiredRoles: string[] | undefined) {
+  return {
+    getAllAndOverride: () => requiredRoles,
+  } as unknown as Reflector;
 }
