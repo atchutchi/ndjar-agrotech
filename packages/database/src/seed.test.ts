@@ -6,6 +6,7 @@ import {
 import { describe, expect, it } from "vitest";
 
 import {
+  PILOT_SEED_ORDER,
   seedCalendarTasks,
   seedCommunities,
   seedCommunityGroups,
@@ -18,6 +19,18 @@ import {
 } from "./seed.js";
 
 describe("database seed data", () => {
+  it("orders parent tables before dependent records", () => {
+    expect(PILOT_SEED_ORDER.indexOf("communities")).toBeLessThan(
+      PILOT_SEED_ORDER.indexOf("communityGroupMembers"),
+    );
+    expect(PILOT_SEED_ORDER.indexOf("communityGroups")).toBeLessThan(
+      PILOT_SEED_ORDER.indexOf("communityGroupMembers"),
+    );
+    expect(PILOT_SEED_ORDER.indexOf("crops")).toBeLessThan(
+      PILOT_SEED_ORDER.indexOf("cropPresence"),
+    );
+  });
+
   it("maps the pilot fixtures into stable database insert records", () => {
     expect(seedRegions).toHaveLength(pilotSouthRegions.length);
     expect(seedCrops).toHaveLength(pilotCrops.length);

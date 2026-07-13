@@ -59,7 +59,13 @@ export interface ConsultationQuestion {
   cropId?: string;
   regionId?: string;
   language?: string;
-  hasReviewedAnswer?: boolean;
+  reviewedAnswer?: ReviewedAnswerReference;
+}
+
+export interface ReviewedAnswerReference {
+  reviewedAt: string;
+  reviewedByUserId: string;
+  templateId: string;
 }
 
 export type EscalationReason =
@@ -109,7 +115,11 @@ export function shouldEscalateQuestion(
     };
   }
 
-  if (input.hasReviewedAnswer) {
+  if (
+    input.reviewedAnswer?.templateId &&
+    input.reviewedAnswer.reviewedByUserId &&
+    Number.isFinite(Date.parse(input.reviewedAnswer.reviewedAt))
+  ) {
     return {
       shouldEscalate: false,
       reason: "reviewed_answer_available",

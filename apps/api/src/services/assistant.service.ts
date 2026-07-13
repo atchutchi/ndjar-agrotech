@@ -18,23 +18,33 @@ interface LocalAnswerTemplate {
   id: string;
   triggerTerms: string[];
   body: string;
+  reviewedAt: string;
+  reviewedByUserId: string;
 }
+
+const PILOT_REVIEW = {
+  reviewedAt: "2026-07-10T00:00:00.000Z",
+  reviewedByUserId: "pilot-agronomic-review-board",
+} as const;
 
 const LOCAL_SAFE_TEMPLATES: LocalAnswerTemplate[] = [
   {
     id: "soil-ph-basic",
     triggerTerms: ["ph", "solo"],
-    body: "Um pH perto de 6 costuma ser favoravel para muitas culturas. No piloto N'djar, este dado e apenas exemplo local e deve ser confirmado por observacao ou analise.",
+    body: "O pH descreve a acidez ou alcalinidade da amostra. Nao determina, por si so, a adequacao de uma cultura. Confirma o metodo, a profundidade e a analise local antes de recomendar uma accao.",
+    ...PILOT_REVIEW,
   },
   {
     id: "calendar-basic",
     triggerTerms: ["calendario", "plantar"],
     body: "Para o piloto, consulta o calendario local por mes e confirma a fase da cultura antes de agir. A API nao recomenda doses nem produtos.",
+    ...PILOT_REVIEW,
   },
   {
     id: "crop-list-basic",
     triggerTerms: ["culturas", "comunidade"],
     body: "A lista piloto mostra as culturas observadas por comunidade e mantem o estado da fonte em cada registo.",
+    ...PILOT_REVIEW,
   },
 ] as const;
 
@@ -68,7 +78,13 @@ export class AssistantService {
       cropId: input.cropId,
       regionId: input.regionId,
       language: input.language,
-      hasReviewedAnswer: template !== null,
+      reviewedAnswer: template
+        ? {
+            reviewedAt: template.reviewedAt,
+            reviewedByUserId: template.reviewedByUserId,
+            templateId: template.id,
+          }
+        : undefined,
     });
 
     if (decision.shouldEscalate) {
@@ -81,6 +97,13 @@ export class AssistantService {
       consultationStatus: "answered_by_template",
       source: "local_reviewed_template",
       templateId: template?.id,
+      review: template
+        ? {
+            reviewedAt: template.reviewedAt,
+            reviewedByUserId: template.reviewedByUserId,
+            templateId: template.id,
+          }
+        : undefined,
       decision,
       response: {
         body: template?.body,

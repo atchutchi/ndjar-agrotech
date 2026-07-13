@@ -7,30 +7,28 @@ import {
   type ConsultationQuestion,
 } from "./index.js";
 
+const reviewedAnswer = {
+  reviewedAt: "2026-07-13T10:00:00.000Z",
+  reviewedByUserId: "doctor-1",
+  templateId: "soil-ph-explanation-v1",
+};
+
 describe("classifyPhValue", () => {
-  it("classifies values below 5.6 as acidic", () => {
-    expect(classifyPhValue(5.59)).toBe("acidic");
+  it("classifies pH using chemical bands without implying crop suitability", () => {
+    expect(classifyPhValue(4.49)).toBe("strongly-acidic");
+    expect(classifyPhValue(4.5)).toBe("acidic");
+    expect(classifyPhValue(5.5)).toBe("slightly-acidic");
+    expect(classifyPhValue(6.5)).toBe("neutral");
+    expect(classifyPhValue(7.5)).toBe("neutral");
+    expect(classifyPhValue(7.51)).toBe("alkaline");
   });
 
-  it("classifies values from 5.6 to 6.5 as favorable", () => {
-    expect(classifyPhValue(5.6)).toBe("favorable");
-    expect(classifyPhValue(6.5)).toBe("favorable");
-  });
-
-  it("classifies value 7 as neutral", () => {
-    expect(classifyPhValue(7)).toBe("neutral");
-  });
-
-  it("classifies values above 7 as alkaline", () => {
-    expect(classifyPhValue(7.01)).toBe("alkaline");
-  });
-
-  it("keeps the gap between favorable and neutral marked as uncertain", () => {
-    expect(classifyPhValue(6.7)).toBe("near-neutral");
-  });
-
-  it("rejects invalid numeric input", () => {
+  it("rejects non-finite and out-of-scale pH values", () => {
     expect(() => classifyPhValue(Number.NaN)).toThrow("finite");
+    expect(() => classifyPhValue(-0.01)).toThrow("between 0 and 14");
+    expect(() => classifyPhValue(14.01)).toThrow("between 0 and 14");
+    expect(classifyPhValue(0)).toBe("strongly-acidic");
+    expect(classifyPhValue(14)).toBe("alkaline");
   });
 });
 
@@ -46,7 +44,7 @@ describe("createSampleRecord", () => {
       }),
     ).toMatchObject({
       id: "sample-1",
-      phClass: "favorable",
+      phClass: "slightly-acidic",
       status: "field_observed",
       method: "water",
     });
@@ -57,7 +55,7 @@ describe("shouldEscalateQuestion", () => {
   it("does not escalate when reviewed content answers a low-risk question", () => {
     const input: ConsultationQuestion = {
       text: "Qual o significado de um pH 6.2 no solo?",
-      hasReviewedAnswer: true,
+      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -82,7 +80,7 @@ describe("shouldEscalateQuestion", () => {
   it("escalates pesticide and herbicide questions even with reviewed content", () => {
     const input: ConsultationQuestion = {
       text: "Posso usar pesticida e herbicida na mesma semana na mandioca?",
-      hasReviewedAnswer: true,
+      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -95,7 +93,7 @@ describe("shouldEscalateQuestion", () => {
   it("escalates chemical dosage questions with explicit chemical wording", () => {
     const input: ConsultationQuestion = {
       text: "Qual a dosagem deste quimico para o tomate?",
-      hasReviewedAnswer: true,
+      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -108,7 +106,7 @@ describe("shouldEscalateQuestion", () => {
   it("escalates unknown product questions even when phrased indirectly", () => {
     const input: ConsultationQuestion = {
       text: "Nao sei que produto e este, posso usar?",
-      hasReviewedAnswer: true,
+      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -121,7 +119,7 @@ describe("shouldEscalateQuestion", () => {
   it("escalates treatment burn reports after application", () => {
     const input: ConsultationQuestion = {
       text: "As folhas ficaram queimadas depois do tratamento. O que faco?",
-      hasReviewedAnswer: true,
+      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -134,7 +132,7 @@ describe("shouldEscalateQuestion", () => {
   it("escalates mixing questions even when the products are not named", () => {
     const input: ConsultationQuestion = {
       text: "Posso misturar dois produtos?",
-      hasReviewedAnswer: true,
+      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -147,7 +145,7 @@ describe("shouldEscalateQuestion", () => {
   it("escalates spray dosage questions with operational wording", () => {
     const input: ConsultationQuestion = {
       text: "Qual e a dose para pulverizar?",
-      hasReviewedAnswer: true,
+      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -160,7 +158,7 @@ describe("shouldEscalateQuestion", () => {
   it("escalates exact reapplication timing questions even with reviewed content", () => {
     const input: ConsultationQuestion = {
       text: "Quando volto a aplicar?",
-      hasReviewedAnswer: true,
+      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -173,7 +171,7 @@ describe("shouldEscalateQuestion", () => {
   it("escalates exact harvest waiting-period questions even with reviewed content", () => {
     const input: ConsultationQuestion = {
       text: "Quanto tempo devo esperar antes da colheita?",
-      hasReviewedAnswer: true,
+      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -190,7 +188,7 @@ describe("shouldEscalateQuestion", () => {
   it("escalates exact parcel re-entry questions even with reviewed content", () => {
     const input: ConsultationQuestion = {
       text: "Posso entrar na parcela amanha?",
-      hasReviewedAnswer: true,
+      reviewedAnswer,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({
@@ -246,7 +244,6 @@ describe("shouldEscalateQuestion", () => {
   it("escalates when there is no safe reviewed answer", () => {
     const input: ConsultationQuestion = {
       text: "Qual a melhor forma de guardar sementes para a proxima campanha?",
-      hasReviewedAnswer: false,
     };
 
     expect(shouldEscalateQuestion(input)).toEqual({

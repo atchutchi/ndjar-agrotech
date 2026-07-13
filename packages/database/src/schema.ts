@@ -1,6 +1,8 @@
 import { AGRONOMIC_SOURCE_STATUSES } from "@ndjar/domain";
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   customType,
   doublePrecision,
   foreignKey,
@@ -38,11 +40,17 @@ export const communityGroupTypeEnum = pgEnum("community_group_type", [
   "administrative",
 ]);
 export const phClassEnum = pgEnum("ph_class", [
+  "strongly-acidic",
   "acidic",
-  "favorable",
-  "near-neutral",
+  "slightly-acidic",
   "neutral",
   "alkaline",
+]);
+export const sourceConfidenceEnum = pgEnum("source_confidence", [
+  "unknown",
+  "low",
+  "medium",
+  "high",
 ]);
 export const phMethodEnum = pgEnum("ph_method", [
   "water",
@@ -183,6 +191,28 @@ function offlineSyncColumns() {
   };
 }
 
+export const agronomicSources = pgTable(
+  "agronomic_sources",
+  {
+    id: text("id").primaryKey(),
+    documentTitle: text("document_title").notNull(),
+    documentDateText: text("document_date_text").notNull(),
+    responsibleName: text("responsible_name").notNull(),
+    confidence: sourceConfidenceEnum("confidence").default("unknown").notNull(),
+    version: integer("version").default(1).notNull(),
+    ...timestampColumns(),
+  },
+  (table) => [
+    check("agronomic_sources_version_positive", sql`${table.version} >= 1`),
+  ],
+);
+
+function agronomicSourceColumn() {
+  return text("source_id")
+    .notNull()
+    .references(() => agronomicSources.id);
+}
+
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   displayName: text("display_name"),
@@ -203,6 +233,7 @@ export const regions = pgTable("regions", {
   regionName: text("region_name").notNull(),
   sectorName: text("sector_name").notNull(),
   sourceStatus: sourceStatusEnum("source_status").notNull(),
+  sourceId: agronomicSourceColumn(),
   centroid: postgisGeometry("centroid", { type: "Point" }),
   centroidSourceStatus: sourceStatusEnum("centroid_source_status"),
   boundary: postgisGeometry("boundary", { type: "MultiPolygon" }),
@@ -221,6 +252,7 @@ export const communityGroups = pgTable("community_groups", {
   areaHectares: doublePrecision("area_hectares"),
   parcelSizeHectares: doublePrecision("parcel_size_hectares"),
   sourceStatus: sourceStatusEnum("source_status").notNull(),
+  sourceId: agronomicSourceColumn(),
   geometry: postgisGeometry("geometry", { type: "Polygon" }),
   geometrySourceStatus: sourceStatusEnum("geometry_source_status"),
   ...offlineSyncColumns(),
@@ -244,6 +276,7 @@ export const communities = pgTable("communities", {
   productionMode: text("production_mode"),
   chemicalUse: text("chemical_use"),
   sourceStatus: sourceStatusEnum("source_status").notNull(),
+  sourceId: agronomicSourceColumn(),
   centroid: postgisGeometry("centroid", { type: "Point" }),
   centroidSourceStatus: sourceStatusEnum("centroid_source_status"),
   boundary: postgisGeometry("boundary", { type: "MultiPolygon" }),
@@ -261,6 +294,7 @@ export const communityGroupMembers = pgTable("community_group_members", {
     .notNull()
     .references(() => communities.id),
   sourceStatus: sourceStatusEnum("source_status").notNull(),
+  sourceId: agronomicSourceColumn(),
   ...timestampColumns(),
 });
 
@@ -268,6 +302,7 @@ export const crops = pgTable("crops", {
   id: text("id").primaryKey(),
   label: text("label").notNull(),
   sourceStatus: sourceStatusEnum("source_status").notNull(),
+  sourceId: agronomicSourceColumn(),
   ...offlineSyncColumns(),
   ...timestampColumns(),
 });
@@ -283,25 +318,40 @@ export const cropPresenceGroupObservations = pgTable(
       .notNull()
       .references(() => communityGroups.id),
     sourceStatus: sourceStatusEnum("source_status").notNull(),
+    sourceId: agronomicSourceColumn(),
     observedAt: timestamp("observed_at", { withTimezone: true }),
     ...timestampColumns(),
   },
 );
 
-export const cropPresence = pgTable("crop_presence", {
-  id: text("id").primaryKey(),
-  cropId: text("crop_id")
-    .notNull()
-    .references(() => crops.id),
-  communityId: text("community_id")
-    .notNull()
-    .references(() => communities.id),
-  sourceStatus: sourceStatusEnum("source_status").notNull(),
-  sourceGroupId: text("source_group_id").references(() => communityGroups.id),
-  observedAt: timestamp("observed_at", { withTimezone: true }),
-  ...offlineSyncColumns(),
-  ...timestampColumns(),
-});
+export const cropPresence = pgTable(
+  "crop_presence",
+  {
+    id: text("id").primaryKey(),
+    cropId: text("crop_id")
+      .notNull()
+      .references(() => crops.id),
+    communityId: text("community_id")
+      .notNull()
+      .references(() => communities.id),
+    sourceStatus: sourceStatusEnum("source_status").notNull(),
+    sourceId: agronomicSourceColumn(),
+    sourceGroupId: text("source_group_id").references(
+      () => communityGroups.id,
+    ),
+    observedAt: timestamp("observed_at", { withTimezone: true }),
+    ...offlineSyncColumns(),
+    ...timestampColumns(),
+  },
+  (table) => [
+    uniqueIndex("crop_presence_crop_community_unique").on(
+      table.cropId,
+      table.communityId,
+    ),
+    index("crop_presence_source_group_idx").on(table.sourceGroupId),
+    index("crop_presence_source_id_idx").on(table.sourceId),
+  ],
+);
 
 export const cropProductionEvidence = pgTable("crop_production_evidence", {
   id: text("id").primaryKey(),
@@ -313,6 +363,7 @@ export const cropProductionEvidence = pgTable("crop_production_evidence", {
   bagWeightKg: doublePrecision("bag_weight_kg").notNull(),
   useCases: jsonb("use_cases").$type<string[]>().notNull(),
   sourceStatus: sourceStatusEnum("source_status").notNull(),
+  sourceId: agronomicSourceColumn(),
   ...timestampColumns(),
 });
 
@@ -324,25 +375,47 @@ export const cropAgronomicNotes = pgTable("crop_agronomic_notes", {
   communityId: text("community_id").references(() => communities.id),
   note: text("note").notNull(),
   sourceStatus: sourceStatusEnum("source_status").notNull(),
+  sourceId: agronomicSourceColumn(),
   ...timestampColumns(),
 });
 
-export const soilSamples = pgTable("soil_samples", {
-  id: text("id").primaryKey(),
-  regionId: text("region_id").references(() => regions.id),
-  communityId: text("community_id").references(() => communities.id),
-  ph: doublePrecision("ph"),
-  phClass: phClassEnum("ph_class"),
-  phMethod: phMethodEnum("ph_method").default("unknown").notNull(),
-  collectedAt: timestamp("collected_at", { withTimezone: true }),
-  collectedAtText: text("collected_at_text"),
-  depthCm: doublePrecision("depth_cm"),
-  location: postgisGeometry("location", { type: "Point" }),
-  locationSourceStatus: sourceStatusEnum("location_source_status"),
-  sourceStatus: sourceStatusEnum("source_status").notNull(),
-  ...offlineSyncColumns(),
-  ...timestampColumns(),
-});
+export const soilSamples = pgTable(
+  "soil_samples",
+  {
+    id: text("id").primaryKey(),
+    regionId: text("region_id").references(() => regions.id),
+    communityId: text("community_id").references(() => communities.id),
+    ph: doublePrecision("ph"),
+    phClass: phClassEnum("ph_class"),
+    phMethod: phMethodEnum("ph_method").default("unknown").notNull(),
+    collectedAt: timestamp("collected_at", { withTimezone: true }),
+    collectedAtText: text("collected_at_text"),
+    depthCm: doublePrecision("depth_cm"),
+    location: postgisGeometry("location", { type: "Point" }),
+    locationSourceStatus: sourceStatusEnum("location_source_status"),
+    sourceStatus: sourceStatusEnum("source_status").notNull(),
+    sourceId: agronomicSourceColumn(),
+    ...offlineSyncColumns(),
+    ...timestampColumns(),
+  },
+  (table) => [
+    check(
+      "soil_samples_ph_range",
+      sql`${table.ph} is null or (${table.ph} >= 0 and ${table.ph} <= 14)`,
+    ),
+    check(
+      "soil_samples_ph_class_coherence",
+      sql`(${table.ph} is null and ${table.phClass} is null) or (${table.ph} is not null and ${table.phClass} is not null)`,
+    ),
+    check(
+      "soil_samples_depth_non_negative",
+      sql`${table.depthCm} is null or ${table.depthCm} >= 0`,
+    ),
+    index("soil_samples_region_id_idx").on(table.regionId),
+    index("soil_samples_community_id_idx").on(table.communityId),
+    index("soil_samples_source_id_idx").on(table.sourceId),
+  ],
+);
 
 export const calendarTasks = pgTable("calendar_tasks", {
   id: text("id").primaryKey(),
@@ -353,31 +426,45 @@ export const calendarTasks = pgTable("calendar_tasks", {
   taskType: calendarTaskTypeEnum("task_type").notNull(),
   summary: text("summary").notNull(),
   sourceStatus: sourceStatusEnum("source_status").notNull(),
+  sourceId: agronomicSourceColumn(),
   ...offlineSyncColumns(),
   ...timestampColumns(),
 });
 
-export const answerTemplates = pgTable("answer_templates", {
-  id: text("id").primaryKey(),
-  cropId: text("crop_id").references(() => crops.id),
-  regionId: text("region_id").references(() => regions.id),
-  language: text("language").default("pt").notNull(),
-  questionKey: text("question_key").notNull(),
-  triggerTerms: jsonb("trigger_terms").$type<string[]>().default([]).notNull(),
-  answerText: text("answer_text").notNull(),
-  deterministicPriority: integer("deterministic_priority")
-    .default(100)
-    .notNull(),
-  requiresDoctorReview: boolean("requires_doctor_review")
-    .default(false)
-    .notNull(),
-  active: boolean("active").default(true).notNull(),
-  reviewedByUserId: uuid("reviewed_by_user_id").references(() => users.id),
-  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
-  sourceStatus: sourceStatusEnum("source_status").notNull(),
-  ...offlineSyncColumns(),
-  ...timestampColumns(),
-});
+export const answerTemplates = pgTable(
+  "answer_templates",
+  {
+    id: text("id").primaryKey(),
+    cropId: text("crop_id").references(() => crops.id),
+    regionId: text("region_id").references(() => regions.id),
+    language: text("language").default("pt").notNull(),
+    questionKey: text("question_key").notNull(),
+    triggerTerms: jsonb("trigger_terms").$type<string[]>().default([]).notNull(),
+    answerText: text("answer_text").notNull(),
+    deterministicPriority: integer("deterministic_priority")
+      .default(100)
+      .notNull(),
+    requiresDoctorReview: boolean("requires_doctor_review")
+      .default(true)
+      .notNull(),
+    active: boolean("active").default(false).notNull(),
+    reviewedByUserId: uuid("reviewed_by_user_id").references(() => users.id),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewVersion: integer("review_version"),
+    sourceStatus: sourceStatusEnum("source_status").notNull(),
+    sourceId: agronomicSourceColumn(),
+    ...offlineSyncColumns(),
+    ...timestampColumns(),
+  },
+  (table) => [
+    check(
+      "answer_templates_active_requires_review",
+      sql`not ${table.active} or (${table.reviewedByUserId} is not null and ${table.reviewedAt} is not null and ${table.reviewVersion} >= 1)`,
+    ),
+    index("answer_templates_source_id_idx").on(table.sourceId),
+    index("answer_templates_reviewed_by_idx").on(table.reviewedByUserId),
+  ],
+);
 
 export const ussdSessions = pgTable("ussd_sessions", {
   id: text("id").primaryKey(),
@@ -424,22 +511,38 @@ export const consultations = pgTable("consultations", {
   ...timestampColumns(),
 });
 
-export const consultationResponses = pgTable("consultation_responses", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  consultationId: uuid("consultation_id")
-    .notNull()
-    .references(() => consultations.id),
-  answerTemplateId: text("answer_template_id").references(
-    () => answerTemplates.id,
-  ),
-  responderUserId: uuid("responder_user_id").references(() => users.id),
-  responseType: consultationResponseTypeEnum("response_type").notNull(),
-  body: text("body").notNull(),
-  sourceStatus: sourceStatusEnum("source_status").notNull(),
-  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
-  ...offlineSyncColumns(),
-  ...timestampColumns(),
-});
+export const consultationResponses = pgTable(
+  "consultation_responses",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    consultationId: uuid("consultation_id")
+      .notNull()
+      .references(() => consultations.id),
+    answerTemplateId: text("answer_template_id").references(
+      () => answerTemplates.id,
+    ),
+    responderUserId: uuid("responder_user_id").references(() => users.id),
+    responseType: consultationResponseTypeEnum("response_type").notNull(),
+    body: text("body").notNull(),
+    sourceStatus: sourceStatusEnum("source_status").notNull(),
+    sourceId: agronomicSourceColumn(),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    ...offlineSyncColumns(),
+    ...timestampColumns(),
+  },
+  (table) => [
+    check(
+      "consultation_responses_template_traceability",
+      sql`${table.responseType} <> 'deterministic_template' or ${table.answerTemplateId} is not null`,
+    ),
+    check(
+      "consultation_responses_doctor_traceability",
+      sql`${table.responseType} <> 'doctor_response' or ${table.responderUserId} is not null`,
+    ),
+    index("consultation_responses_consultation_idx").on(table.consultationId),
+    index("consultation_responses_source_id_idx").on(table.sourceId),
+  ],
+);
 
 export const notificationJobs = pgTable("notification_jobs", {
   id: uuid("id").defaultRandom().primaryKey(),

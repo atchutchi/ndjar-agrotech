@@ -10,9 +10,9 @@ export const AGRONOMIC_SOURCE_STATUSES = [
 export type AgronomicSourceStatus = (typeof AGRONOMIC_SOURCE_STATUSES)[number];
 
 export const PH_CLASSES = [
+  "strongly-acidic",
   "acidic",
-  "favorable",
-  "near-neutral",
+  "slightly-acidic",
   "neutral",
   "alkaline",
 ] as const;
@@ -37,19 +37,23 @@ export function classifyPhValue(value: number): PhClass {
     throw new RangeError("pH value must be finite");
   }
 
-  if (value < 5.6) {
+  if (value < 0 || value > 14) {
+    throw new RangeError("pH value must be between 0 and 14");
+  }
+
+  if (value < 4.5) {
+    return "strongly-acidic";
+  }
+
+  if (value < 5.5) {
     return "acidic";
   }
 
-  if (value <= 6.5) {
-    return "favorable";
+  if (value < 6.5) {
+    return "slightly-acidic";
   }
 
-  if (value < 7) {
-    return "near-neutral";
-  }
-
-  if (value === 7) {
+  if (value <= 7.5) {
     return "neutral";
   }
 

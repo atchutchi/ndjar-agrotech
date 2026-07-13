@@ -5,6 +5,7 @@ import {
 } from "@ndjar/fixtures";
 
 import {
+  agronomicSources,
   calendarTasks,
   communities,
   communityGroupMembers,
@@ -18,6 +19,7 @@ import {
   soilSamples,
 } from "./schema.js";
 
+type AgronomicSourceInsert = typeof agronomicSources.$inferInsert;
 type RegionInsert = typeof regions.$inferInsert;
 type CommunityGroupInsert = typeof communityGroups.$inferInsert;
 type CommunityGroupMemberInsert = typeof communityGroupMembers.$inferInsert;
@@ -45,6 +47,37 @@ function getPilotRegionId(): string {
 
 const pilotRegionId = getPilotRegionId();
 
+const PILOT_DIAGNOSTIC_SOURCE_ID = "pilot-south-diagnostic-v1";
+const PILOT_CALENDAR_SOURCE_ID = "agricultural-calendar-v1";
+const SYNTHETIC_PH_SOURCE_ID = "synthetic-ph-example-v1";
+
+export const seedAgronomicSources: AgronomicSourceInsert[] = [
+  {
+    id: PILOT_DIAGNOSTIC_SOURCE_ID,
+    documentTitle: "Sumario Executivo N'djar e diagnostico do sul",
+    documentDateText: "Data nao indicada no documento",
+    responsibleName: "N'djar",
+    confidence: "medium",
+    version: 1,
+  },
+  {
+    id: PILOT_CALENDAR_SOURCE_ID,
+    documentTitle: "Calendario Agricultural",
+    documentDateText: "Data nao indicada no ficheiro",
+    responsibleName: "N'djar",
+    confidence: "unknown",
+    version: 1,
+  },
+  {
+    id: SYNTHETIC_PH_SOURCE_ID,
+    documentTitle: "Amostra sintetica de pH para demonstracao",
+    documentDateText: "2026-07-08",
+    responsibleName: "N'djar",
+    confidence: "low",
+    version: 1,
+  },
+];
+
 function uniqueById<T extends { id: string }>(records: T[]): T[] {
   return [...new Map(records.map((record) => [record.id, record])).values()];
 }
@@ -54,6 +87,7 @@ export const seedRegions: RegionInsert[] = pilotSouthRegions.map((region) => ({
   regionName: region.regionName,
   sectorName: region.sectorName,
   sourceStatus: region.sourceStatus,
+  sourceId: PILOT_DIAGNOSTIC_SOURCE_ID,
 }));
 
 const areaCommunityGroups: CommunityGroupInsert[] = pilotSouthRegions.flatMap(
@@ -66,6 +100,7 @@ const areaCommunityGroups: CommunityGroupInsert[] = pilotSouthRegions.flatMap(
       areaHectares: group.areaHectares,
       parcelSizeHectares: group.parcelSizeHectares,
       sourceStatus: group.sourceStatus,
+      sourceId: PILOT_DIAGNOSTIC_SOURCE_ID,
     })),
 );
 
@@ -77,6 +112,7 @@ const cropPresenceCommunityGroups: CommunityGroupInsert[] = pilotCrops.flatMap(
       groupType: "crop_presence",
       label: group.id,
       sourceStatus: group.sourceStatus,
+      sourceId: PILOT_DIAGNOSTIC_SOURCE_ID,
     })),
 );
 
@@ -98,6 +134,7 @@ export const seedCommunities: CommunityInsert[] = pilotSouthRegions.flatMap(
       productionMode: community.productionMode,
       chemicalUse: community.chemicalUse,
       sourceStatus: community.sourceStatus,
+      sourceId: PILOT_DIAGNOSTIC_SOURCE_ID,
     })),
 );
 
@@ -109,6 +146,7 @@ const areaGroupMembers: CommunityGroupMemberInsert[] =
         groupId: group.id,
         communityId,
         sourceStatus: group.sourceStatus,
+        sourceId: PILOT_DIAGNOSTIC_SOURCE_ID,
       })),
     ),
   );
@@ -121,6 +159,7 @@ const cropPresenceGroupMembers: CommunityGroupMemberInsert[] =
         groupId: group.id,
         communityId,
         sourceStatus: group.sourceStatus,
+        sourceId: PILOT_DIAGNOSTIC_SOURCE_ID,
       })),
     ),
   );
@@ -132,6 +171,7 @@ export const seedCrops: CropInsert[] = pilotCrops.map((crop) => ({
   id: crop.id,
   label: crop.label,
   sourceStatus: crop.sourceStatus,
+  sourceId: PILOT_DIAGNOSTIC_SOURCE_ID,
 }));
 
 export const seedCropPresenceGroupObservations: CropPresenceGroupObservationInsert[] =
@@ -141,6 +181,7 @@ export const seedCropPresenceGroupObservations: CropPresenceGroupObservationInse
       cropId: crop.id,
       groupId: group.id,
       sourceStatus: group.sourceStatus,
+      sourceId: PILOT_DIAGNOSTIC_SOURCE_ID,
     })),
   );
 
@@ -152,6 +193,7 @@ export const seedCropPresence: CropPresenceInsert[] = pilotCrops.flatMap(
       communityId: presence.communityId,
       sourceStatus: presence.sourceStatus,
       sourceGroupId: presence.sourceGroupId,
+      sourceId: PILOT_DIAGNOSTIC_SOURCE_ID,
     })),
 );
 
@@ -167,6 +209,7 @@ export const seedCropProductionEvidence: CropProductionEvidenceInsert[] =
             bagWeightKg: crop.productionEvidence.bagWeightKg,
             useCases: crop.productionEvidence.useCases,
             sourceStatus: crop.productionEvidence.sourceStatus,
+            sourceId: PILOT_DIAGNOSTIC_SOURCE_ID,
           },
         ]
       : [],
@@ -180,6 +223,7 @@ export const seedCropAgronomicNotes: CropAgronomicNoteInsert[] =
       communityId: note.communityId,
       note: note.note,
       sourceStatus: note.sourceStatus,
+      sourceId: PILOT_DIAGNOSTIC_SOURCE_ID,
     })),
   );
 
@@ -193,6 +237,10 @@ export const seedSoilSamples: SoilSampleInsert[] = pilotSouthRegions.flatMap(
       phMethod: sample.method,
       collectedAtText: sample.collectedAt,
       sourceStatus: sample.status,
+      sourceId:
+        sample.id === "synthetic-example-ph-not-field-sample"
+          ? SYNTHETIC_PH_SOURCE_ID
+          : PILOT_DIAGNOSTIC_SOURCE_ID,
     })),
 );
 
@@ -205,10 +253,12 @@ export const seedCalendarTasks: CalendarTaskInsert[] = pilotCalendarTasks.map(
     taskType: task.taskType,
     summary: task.summary,
     sourceStatus: task.sourceStatus,
+    sourceId: PILOT_CALENDAR_SOURCE_ID,
   }),
 );
 
 export const pilotSeedData = {
+  agronomicSources: seedAgronomicSources,
   regions: seedRegions,
   communityGroups: seedCommunityGroups,
   communityGroupMembers: seedCommunityGroupMembers,
@@ -221,3 +271,18 @@ export const pilotSeedData = {
   soilSamples: seedSoilSamples,
   calendarTasks: seedCalendarTasks,
 } as const;
+
+export const PILOT_SEED_ORDER = [
+  "agronomicSources",
+  "regions",
+  "communityGroups",
+  "communities",
+  "communityGroupMembers",
+  "crops",
+  "cropPresenceGroupObservations",
+  "cropPresence",
+  "cropProductionEvidence",
+  "cropAgronomicNotes",
+  "soilSamples",
+  "calendarTasks",
+] as const;
