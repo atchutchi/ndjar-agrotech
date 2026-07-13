@@ -16,3 +16,5 @@ Production foundation Task 1: complete (commits ed62c44..b272fd6, review clean a
 Production foundation Task 2: complete (commits b272fd6..ce0dfa4, review clean after type-contract fix)
 Production foundation Task 3: complete (commits ce0dfa4..d537061, review approved; minors: clean task-3 report fixture block before final review, restore NDJAR_DATABASE_MODE in database module test)
 Production foundation Task 4: complete (commits 9ae2c70..0595560, review clean after auth guard and disabled-account refresh fixes)
+Production foundation Task 5: complete (commits 95ee01c..cc63723, review approved; minors: add handler-over-class metadata precedence test and correct task-5 report file list)
+Security secret prevention: complete (commits cc63723..4e0dc44, review approved after immutable pins and trusted PR scan; minor: pre-commit/action has a mutable transitive cache dependency)
