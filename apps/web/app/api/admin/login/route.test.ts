@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { redirect } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const cookieStore = {
@@ -31,6 +32,8 @@ function loginRequest() {
 describe("POST /api/admin/login", () => {
   beforeEach(() => {
     cookieStore.set.mockReset();
+    vi.mocked(redirect).mockClear();
+    vi.unstubAllGlobals();
     process.env.NDJAR_API_URL = "https://api.example.test";
   });
 
@@ -66,6 +69,7 @@ describe("POST /api/admin/login", () => {
     );
 
     expect(cookieStore.set).not.toHaveBeenCalled();
+    expect(redirect).toHaveBeenCalledTimes(1);
   });
 
   it("não cria sessão quando o utilizador não tem o papel admin", async () => {
@@ -102,5 +106,35 @@ describe("POST /api/admin/login", () => {
     );
 
     expect(cookieStore.set).not.toHaveBeenCalled();
+  });
+
+  it("falha fechada quando falta a configuração da API", async () => {
+    delete process.env.NDJAR_API_URL;
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(POST(loginRequest())).rejects.toThrow(
+      "redirect:/admin/login?error=invalid",
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(cookieStore.set).not.toHaveBeenCalled();
+    expect(redirect).toHaveBeenCalledTimes(1);
+  });
+
+  it("falha fechada quando a API não está disponível", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("API indisponível");
+      }),
+    );
+
+    await expect(POST(loginRequest())).rejects.toThrow(
+      "redirect:/admin/login?error=invalid",
+    );
+
+    expect(cookieStore.set).not.toHaveBeenCalled();
+    expect(redirect).toHaveBeenCalledTimes(1);
   });
 });
