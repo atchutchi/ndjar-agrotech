@@ -20,3 +20,4 @@ Production foundation Task 5: complete (commits 95ee01c..cc63723, review approve
 Security secret prevention: complete (commits cc63723..4e0dc44, review approved after immutable pins and trusted PR scan; minor: pre-commit/action has a mutable transitive cache dependency)
 Production foundation Task 6: complete (commits 83eddfa..87f3b5b, review approved after redirect and UTF-8 fixes; encoding findings retracted after explicit UTF-8 verification)
 Production foundation Task 7: complete (commits ea96e77..ed6f126, review approved after semantic SQL coverage and Argon2 test stabilization; minor: remove stale parallel-timeout statement from task-7 report)
+Production foundation Task 8: complete (commits 73897cc..327d4d2, review clean after environment-contract and Next.js proxy fixes)
