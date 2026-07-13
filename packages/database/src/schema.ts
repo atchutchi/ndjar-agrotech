@@ -244,10 +244,11 @@ export const seedTombstones = pgTable(
       "seed_tombstones_version_positive",
       sql`${table.removedInVersion} >= 1`,
     ),
-    uniqueIndex("seed_tombstones_entity_unique").on(
+    uniqueIndex("seed_tombstones_entity_version_unique").on(
       table.seedKey,
       table.entityType,
       table.entityId,
+      table.removedInVersion,
     ),
   ],
 );

@@ -1,0 +1,2 @@
+DROP INDEX "seed_tombstones_entity_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "seed_tombstones_entity_version_unique" ON "seed_tombstones" USING btree ("seed_key","entity_type","entity_id","removed_in_version");

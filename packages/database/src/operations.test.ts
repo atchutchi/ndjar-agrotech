@@ -249,8 +249,23 @@ describe("database operations", () => {
     expect(migration).toContain(
       "CREATE TRIGGER seed_tombstone_immutable_guard",
     );
+    const versionedTombstoneMigration = readFileSync(
+      resolve(
+        import.meta.dirname,
+        "../drizzle/0011_seed_tombstone_version.sql",
+      ),
+      "utf8",
+    );
+    expect(versionedTombstoneMigration).toContain(
+      'CREATE UNIQUE INDEX "seed_tombstones_entity_version_unique" ON "seed_tombstones" USING btree ("seed_key","entity_type","entity_id","removed_in_version")',
+    );
     expect(runner).toContain("reconcileSeedTombstones");
     expect(runner).not.toContain(".delete(");
+    const tombstoneInsert = runner.slice(
+      runner.indexOf(".insert(seedTombstones)"),
+      runner.indexOf(".insert(seedManifests)"),
+    );
+    expect(tombstoneInsert).not.toContain("onConflictDoNothing");
   });
 
   it("drops the unused legacy user role enum incrementally", () => {

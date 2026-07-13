@@ -305,16 +305,13 @@ export async function seedPilotDatabase(
     }
 
     if (tombstones.length > 0) {
-      await tx
-        .insert(seedTombstones)
-        .values(
-          tombstones.map((tombstone) => ({
-            ...tombstone,
-            removedInVersion: manifest.version,
-            seedKey: manifest.key,
-          })),
-        )
-        .onConflictDoNothing();
+      await tx.insert(seedTombstones).values(
+        tombstones.map((tombstone) => ({
+          ...tombstone,
+          removedInVersion: manifest.version,
+          seedKey: manifest.key,
+        })),
+      );
     }
 
     await tx
