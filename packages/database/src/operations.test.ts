@@ -184,6 +184,29 @@ describe("database operations", () => {
     expect(familyUnique).toBeLessThan(parentFamilyForeignKey);
   });
 
+  it("binds refresh token parents to the same family and user", () => {
+    const migration = readFileSync(
+      resolve(
+        import.meta.dirname,
+        "../drizzle/0007_refresh_user_integrity.sql",
+      ),
+      "utf8",
+    );
+    const crossUserPreflight = migration.indexOf(
+      'child."user_id" IS DISTINCT FROM parent."user_id"',
+    );
+    const compositeUnique = migration.indexOf(
+      'CREATE UNIQUE INDEX "refresh_tokens_id_family_id_user_id_unique"',
+    );
+    const compositeParentForeignKey = migration.indexOf(
+      'ADD CONSTRAINT "refresh_tokens_parent_family_user_fk" FOREIGN KEY ("parent_token_id","family_id","user_id") REFERENCES "public"."refresh_tokens"("id","family_id","user_id")',
+    );
+
+    expect(crossUserPreflight).toBeGreaterThanOrEqual(0);
+    expect(crossUserPreflight).toBeLessThan(compositeUnique);
+    expect(compositeUnique).toBeLessThan(compositeParentForeignKey);
+  });
+
   it("migrates versioned seed manifests", () => {
     const migration = readFileSync(
       resolve(import.meta.dirname, "../drizzle/0005_seed_manifests.sql"),

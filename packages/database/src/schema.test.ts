@@ -126,9 +126,9 @@ describe("production auth schema", () => {
         const reference = foreignKey.reference();
         return (
           reference.columns.map((column) => column.name).join(",") ===
-            "parent_token_id,family_id" &&
+            "parent_token_id,family_id,user_id" &&
           reference.foreignColumns.map((column) => column.name).join(",") ===
-            "id,family_id"
+            "id,family_id,user_id"
         );
       }),
     ).toBe(true);
@@ -149,7 +149,7 @@ describe("production auth schema", () => {
           index.config.unique &&
           index.config.columns
             .map((column) => ("name" in column ? column.name : undefined))
-            .join(",") === "id,family_id",
+            .join(",") === "id,family_id,user_id",
       ),
     ).toBe(true);
     expect(

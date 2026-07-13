@@ -770,17 +770,18 @@ export const refreshTokens = pgTable(
       name: "refresh_tokens_family_root_fk",
     }),
     foreignKey({
-      columns: [table.parentTokenId, table.familyId],
-      foreignColumns: [table.id, table.familyId],
-      name: "refresh_tokens_parent_family_fk",
+      columns: [table.parentTokenId, table.familyId, table.userId],
+      foreignColumns: [table.id, table.familyId, table.userId],
+      name: "refresh_tokens_parent_family_user_fk",
     }),
     check(
       "refresh_tokens_root_family_coherence",
       sql`${table.parentTokenId} is not null or ${table.familyId} = ${table.id}`,
     ),
-    uniqueIndex("refresh_tokens_id_family_id_unique").on(
+    uniqueIndex("refresh_tokens_id_family_id_user_id_unique").on(
       table.id,
       table.familyId,
+      table.userId,
     ),
     index("refresh_tokens_family_id_idx").on(table.familyId),
     index("refresh_tokens_user_id_idx").on(table.userId),
