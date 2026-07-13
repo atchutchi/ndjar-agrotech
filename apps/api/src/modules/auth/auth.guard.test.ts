@@ -1,16 +1,31 @@
 import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { randomBytes } from "node:crypto";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthGuard } from "./auth.guard.js";
+import { AuthRepository } from "./auth.repository.js";
 import { signAccessToken } from "./auth.tokens.js";
 import { ROLES_KEY, Roles, RolesGuard } from "./roles.guard.js";
 
 describe("AuthGuard", () => {
+  const repository = {
+    findById: vi.fn(),
+  };
+
   beforeEach(() => {
     process.env.JWT_ACCESS_SECRET = randomBytes(48).toString("base64url");
+    repository.findById.mockReset();
+    repository.findById.mockResolvedValue({
+      displayName: "Binta Cisse",
+      id: "user-1",
+      roles: ["farmer"],
+    });
   });
+
+  function createGuard() {
+    return new AuthGuard(repository as unknown as AuthRepository);
+  }
 
   it("preenche o utilizador a partir de um Bearer JWT valido", async () => {
     const request: {
@@ -26,23 +41,59 @@ describe("AuthGuard", () => {
     };
 
     await expect(
-      new AuthGuard().canActivate(requestContext(request)),
+      createGuard().canActivate(requestContext(request)),
     ).resolves.toBe(true);
     expect(request.user).toEqual({ id: "user-1", roles: ["farmer"] });
   });
 
   it("rejeita pedidos sem Bearer JWT", async () => {
     await expect(
-      new AuthGuard().canActivate(requestContext({ headers: {} })),
+      createGuard().canActivate(requestContext({ headers: {} })),
     ).rejects.toThrow(new UnauthorizedException("Sessão obrigatória"));
   });
 
   it("rejeita Bearer JWT invalido", async () => {
     await expect(
-      new AuthGuard().canActivate(
+      createGuard().canActivate(
         requestContext({ headers: { authorization: "Bearer token-invalido" } }),
       ),
     ).rejects.toThrow(new UnauthorizedException("Sessão obrigatória"));
+  });
+
+  it("rejeita imediatamente um JWT de uma conta entretanto desactivada", async () => {
+    repository.findById.mockResolvedValue(null);
+    const token = await signAccessToken({ roles: ["farmer"], sub: "user-1" });
+
+    await expect(
+      createGuard().canActivate(
+        requestContext({
+          headers: { authorization: `Bearer ${token}` },
+        }),
+      ),
+    ).rejects.toThrow(new UnauthorizedException("Sessão obrigatória"));
+  });
+
+  it("usa os papeis actuais da base de dados e nao os papeis antigos do JWT", async () => {
+    repository.findById.mockResolvedValue({
+      displayName: "Admin",
+      id: "user-1",
+      roles: ["super_admin"],
+    });
+    const request: {
+      headers: { authorization: string };
+      user?: { id: string; roles: string[] };
+    } = {
+      headers: {
+        authorization: `Bearer ${await signAccessToken({
+          roles: ["farmer"],
+          sub: "user-1",
+        })}`,
+      },
+    };
+
+    await createGuard().canActivate(requestContext(request));
+
+    expect(request.user).toEqual({ id: "user-1", roles: ["super_admin"] });
   });
 });
 

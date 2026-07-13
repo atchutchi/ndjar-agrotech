@@ -9,7 +9,7 @@ import {
   verificationCodes,
 } from "@ndjar/database";
 import { NDJAR_ROLES } from "@ndjar/domain";
-import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { hash, verify } from "argon2";
 import { randomBytes, randomUUID } from "node:crypto";
 
@@ -22,6 +22,7 @@ export interface AuthUserRecord {
   id: string;
   passwordHash: string;
   roles: string[];
+  verifiedAt: Date | null;
 }
 
 export interface AuthSessionRecord {
@@ -51,6 +52,11 @@ const roleSeed = [
     id: NDJAR_ROLES.admin,
     label: "Administrador",
     description: "Acesso administrativo ao produto NDJAR.",
+  },
+  {
+    id: NDJAR_ROLES.superAdmin,
+    label: "Super Administrador",
+    description: "Acesso administrativo total ao produto NDJAR.",
   },
 ];
 
@@ -168,14 +174,15 @@ export class AuthRepository {
   ): Promise<AuthUserRecord | null> {
     const rows = await this.requireDatabase()
       .select({
-        defaultRole: users.role,
         displayName: users.displayName,
         id: users.id,
         passwordHash: authAccounts.passwordHash,
         roleId: roles.id,
+        verifiedAt: userProfiles.verifiedAt,
       })
       .from(authAccounts)
       .innerJoin(users, eq(authAccounts.userId, users.id))
+      .innerJoin(userProfiles, eq(userProfiles.userId, users.id))
       .leftJoin(userRoles, eq(userRoles.userId, users.id))
       .leftJoin(roles, eq(roles.id, userRoles.roleId))
       .where(
@@ -184,6 +191,7 @@ export class AuthRepository {
           eq(authAccounts.loginIdentifierHash, identifierHash),
           isNull(authAccounts.disabledAt),
           eq(users.isActive, true),
+          isNotNull(userProfiles.verifiedAt),
         ),
       );
 
@@ -195,17 +203,31 @@ export class AuthRepository {
   ): Promise<Omit<AuthUserRecord, "passwordHash"> | null> {
     const rows = await this.requireDatabase()
       .select({
-        defaultRole: users.role,
         displayName: users.displayName,
         id: users.id,
         passwordHash: authAccounts.passwordHash,
         roleId: roles.id,
+        verifiedAt: userProfiles.verifiedAt,
       })
       .from(users)
-      .leftJoin(authAccounts, eq(authAccounts.userId, users.id))
+      .innerJoin(
+        authAccounts,
+        and(
+          eq(authAccounts.userId, users.id),
+          eq(authAccounts.provider, "password"),
+          isNull(authAccounts.disabledAt),
+        ),
+      )
+      .innerJoin(userProfiles, eq(userProfiles.userId, users.id))
       .leftJoin(userRoles, eq(userRoles.userId, users.id))
       .leftJoin(roles, eq(roles.id, userRoles.roleId))
-      .where(and(eq(users.id, userId), eq(users.isActive, true)));
+      .where(
+        and(
+          eq(users.id, userId),
+          eq(users.isActive, true),
+          isNotNull(userProfiles.verifiedAt),
+        ),
+      );
 
     const user = this.toAuthUserRecord(rows);
     if (!user) {
@@ -216,6 +238,7 @@ export class AuthRepository {
       displayName: user.displayName,
       id: user.id,
       roles: user.roles,
+      verifiedAt: user.verifiedAt,
     };
   }
 
@@ -247,13 +270,13 @@ export class AuthRepository {
       const now = new Date();
       const rows = await tx
         .select({
-          defaultRole: users.role,
           displayName: users.displayName,
           id: users.id,
           passwordHash: authAccounts.passwordHash,
           refreshTokenHash: refreshTokens.tokenHash,
           refreshTokenId: refreshTokens.id,
           roleId: roles.id,
+          verifiedAt: userProfiles.verifiedAt,
         })
         .from(refreshTokens)
         .innerJoin(users, eq(refreshTokens.userId, users.id))
@@ -265,6 +288,7 @@ export class AuthRepository {
             isNull(authAccounts.disabledAt),
           ),
         )
+        .innerJoin(userProfiles, eq(userProfiles.userId, users.id))
         .leftJoin(userRoles, eq(userRoles.userId, users.id))
         .leftJoin(roles, eq(roles.id, userRoles.roleId))
         .where(
@@ -273,6 +297,7 @@ export class AuthRepository {
             isNull(refreshTokens.revokedAt),
             gt(refreshTokens.expiresAt, now),
             eq(users.isActive, true),
+            isNotNull(userProfiles.verifiedAt),
           ),
         );
 
@@ -570,11 +595,11 @@ export class AuthRepository {
 
   private toAuthUserRecord(
     rows: {
-      defaultRole: string;
       displayName: string | null;
       id: string;
       passwordHash: string | null;
       roleId: string | null;
+      verifiedAt: Date | null;
     }[],
   ): AuthUserRecord | null {
     const firstRow = rows[0];
@@ -586,13 +611,8 @@ export class AuthRepository {
       displayName: firstRow.displayName,
       id: firstRow.id,
       passwordHash: firstRow.passwordHash,
-      roles: [
-        ...new Set(
-          [firstRow.defaultRole, ...rows.map((row) => row.roleId)].filter(
-            (role): role is string => Boolean(role),
-          ),
-        ),
-      ],
+      roles: [...new Set(rows.map((row) => row.roleId).filter(Boolean))] as string[],
+      verifiedAt: firstRow.verifiedAt,
     };
   }
 }

@@ -22,6 +22,7 @@ import {
   subscriptions,
   ussdSessions,
   userProfiles,
+  userRoleEnum,
   userRoles,
   verificationCodes,
 } from "./schema.js";
@@ -59,6 +60,15 @@ describe("production auth schema", () => {
     expect(refreshTokens).toBeDefined();
     expect(roles).toBeDefined();
     expect(userRoles).toBeDefined();
+  });
+
+  it("alinha todos os papeis do dominio com o enum persistido", () => {
+    expect(userRoleEnum.enumValues).toEqual([
+      "farmer",
+      "agricultural_doctor",
+      "admin",
+      "super_admin",
+    ]);
   });
 
   it("exports subscription and payment primitives", () => {

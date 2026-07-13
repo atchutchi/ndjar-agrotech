@@ -2,10 +2,12 @@ import {
   type CanActivate,
   type ExecutionContext,
   Injectable,
+  Inject,
   UnauthorizedException,
 } from "@nestjs/common";
 
 import { verifyAccessToken } from "./auth.tokens.js";
+import { AuthRepository } from "./auth.repository.js";
 
 import type { AuthenticatedUser } from "./auth.service.js";
 
@@ -31,6 +33,10 @@ function bearerToken(authorization: string | string[] | undefined) {
 
 @Injectable()
 export class AuthGuard implements CanActivate {
+  constructor(
+    @Inject(AuthRepository) private readonly repository: AuthRepository,
+  ) {}
+
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = bearerToken(request.headers.authorization);
@@ -45,9 +51,14 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException("Sessão obrigatória");
       }
 
+      const currentUser = await this.repository.findById(payload.sub);
+      if (!currentUser) {
+        throw new UnauthorizedException("Sessão obrigatória");
+      }
+
       request.user = {
-        id: payload.sub,
-        roles: payload.roles,
+        id: currentUser.id,
+        roles: currentUser.roles,
       };
 
       return true;

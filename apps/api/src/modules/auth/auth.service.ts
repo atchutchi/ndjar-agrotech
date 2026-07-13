@@ -94,7 +94,11 @@ export class AuthService {
       stableHash(input.identifier),
     );
 
-    if (!user || !(await verify(user.passwordHash, input.password))) {
+    if (
+      !user ||
+      !user.verifiedAt ||
+      !(await verify(user.passwordHash, input.password))
+    ) {
       throw new UnauthorizedException("Credenciais invalidas");
     }
 

@@ -3,6 +3,7 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthGuard } from "../auth/auth.guard.js";
+import { AuthRepository } from "../auth/auth.repository.js";
 import { EntitlementsController } from "./entitlements.controller.js";
 import { EntitlementsRepository } from "./entitlements.repository.js";
 import { EntitlementsService } from "./entitlements.service.js";
@@ -52,7 +53,11 @@ describe("EntitlementsController", () => {
 
     const module = await Test.createTestingModule({
       controllers: [EntitlementsController],
-      providers: [{ provide: EntitlementsService, useValue: service }],
+      providers: [
+        { provide: EntitlementsService, useValue: service },
+        { provide: AuthGuard, useValue: { canActivate: () => true } },
+        { provide: AuthRepository, useValue: { findById: vi.fn() } },
+      ],
     }).compile();
 
     await expect(
@@ -66,7 +71,11 @@ describe("EntitlementsController", () => {
   it("falha quando nao existe utilizador autenticado", async () => {
     const module = await Test.createTestingModule({
       controllers: [EntitlementsController],
-      providers: [{ provide: EntitlementsService, useValue: service }],
+      providers: [
+        { provide: EntitlementsService, useValue: service },
+        { provide: AuthGuard, useValue: { canActivate: () => true } },
+        { provide: AuthRepository, useValue: { findById: vi.fn() } },
+      ],
     }).compile();
 
     expect(() => module.get(EntitlementsController).me({})).toThrow(

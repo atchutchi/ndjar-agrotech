@@ -237,6 +237,7 @@ describe("AuthRepository verification codes", () => {
       id: "user-1",
       passwordHash: await testHash(randomBytes(32).toString("base64url")),
       roles: ["farmer"],
+      verifiedAt: new Date(),
     });
 
     await repository.createPasswordResetCode({

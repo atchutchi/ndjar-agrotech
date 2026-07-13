@@ -3,6 +3,8 @@ import { randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthController } from "./auth.controller.js";
+import { AuthGuard } from "./auth.guard.js";
+import { AuthRepository } from "./auth.repository.js";
 import { AuthService } from "./auth.service.js";
 
 const authService = {
@@ -27,7 +29,11 @@ const testRenewedRefreshToken = randomBytes(32).toString("base64url");
 async function createController() {
   const module = await Test.createTestingModule({
     controllers: [AuthController],
-    providers: [{ provide: AuthService, useValue: authService }],
+    providers: [
+      { provide: AuthService, useValue: authService },
+      { provide: AuthGuard, useValue: { canActivate: () => true } },
+      { provide: AuthRepository, useValue: { findById: vi.fn() } },
+    ],
   }).compile();
 
   return module.get(AuthController);

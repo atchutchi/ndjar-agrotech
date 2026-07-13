@@ -1,4 +1,4 @@
-import { ConflictException } from "@nestjs/common";
+import { ConflictException, UnauthorizedException } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -26,6 +26,7 @@ function createService() {
 describe("AuthService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.JWT_ACCESS_SECRET = randomBytes(48).toString("base64url");
   });
 
   it("persiste o email opcional durante o registo", async () => {
@@ -68,5 +69,23 @@ describe("AuthService", () => {
         phone: "+245956086144",
       }),
     ).rejects.toBe(error);
+  });
+
+  it("rejeita o login enquanto o perfil nao estiver verificado", async () => {
+    repository.findByIdentifierHash.mockResolvedValue({
+      displayName: "Binta Cisse",
+      id: "user-1",
+      passwordHash: await import("argon2").then(({ hash }) => hash(testPassword)),
+      roles: ["farmer"],
+      verifiedAt: null,
+    });
+
+    await expect(
+      createService().login({
+        identifier: "+245956086144",
+        password: testPassword,
+      }),
+    ).rejects.toThrow(UnauthorizedException);
+    expect(repository.createRefreshToken).not.toHaveBeenCalled();
   });
 });
