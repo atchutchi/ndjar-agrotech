@@ -1,5 +1,5 @@
 import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
-import type { Reflector } from "@nestjs/core";
+import { Reflector } from "@nestjs/core";
 import { randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -68,6 +68,34 @@ describe("RolesGuard", () => {
     ).toBe(true);
   });
 
+  it("prioriza os papeis definidos no handler sobre os da classe", () => {
+    class ProtectedController {
+      dashboard() {}
+    }
+
+    const handler = ProtectedController.prototype.dashboard;
+    const descriptor = Object.getOwnPropertyDescriptor(
+      ProtectedController.prototype,
+      "dashboard",
+    );
+    if (!descriptor) {
+      throw new Error("Missing dashboard descriptor");
+    }
+
+    Roles("admin")(ProtectedController);
+    Roles("technician")(ProtectedController.prototype, "dashboard", descriptor);
+
+    expect(
+      new RolesGuard(new Reflector()).canActivate(
+        requestContext(
+          { headers: {}, user: { roles: ["technician"] } },
+          ProtectedController,
+          handler,
+        ),
+      ),
+    ).toBe(true);
+  });
+
   it("rejeita o pedido quando o utilizador nao tem um papel exigido", () => {
     const reflector = reflectorWithRequiredRoles(["admin"]);
 
@@ -98,13 +126,17 @@ describe("RolesGuard", () => {
   });
 });
 
-function requestContext(request: {
-  headers: Record<string, string>;
-  user?: unknown;
-}) {
+function requestContext(
+  request: {
+    headers: Record<string, string>;
+    user?: unknown;
+  },
+  controller?: object,
+  handler?: object,
+) {
   return {
-    getClass: () => undefined,
-    getHandler: () => undefined,
+    getClass: () => controller,
+    getHandler: () => handler,
     switchToHttp: () => ({
       getRequest: () => request,
     }),

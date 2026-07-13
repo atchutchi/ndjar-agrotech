@@ -32,8 +32,7 @@ exports para os futuros modulos consumidores.
 
 ## Ficheiros
 
-Foram alterados `apps/api/src/modules/auth/auth.guard.ts`,
-`apps/api/src/modules/auth/auth.guard.test.ts` e
+Foram alterados `apps/api/src/modules/auth/auth.guard.test.ts` e
 `apps/api/src/modules/auth/auth.module.ts`.
 
 Foi criado `apps/api/src/modules/auth/roles.guard.ts`.

@@ -34,7 +34,6 @@
 - `corepack pnpm --filter @ndjar/api exec vitest run src/modules/entitlements/entitlements.controller.test.ts --pool=forks --maxWorkers=1 --fileParallelism=false`: 7 testes passaram.
 - A suite integral passou em modo serial: 55 testes passaram.
 - `corepack pnpm --filter @ndjar/api typecheck`, `corepack pnpm --filter @ndjar/api lint`, `git diff --check` e `py -m pre_commit run detect-secrets --all-files` passaram.
-- O comando padrão `corepack pnpm --filter @ndjar/api test` continua instável sob execução paralela: o teste pré-existente `AuthRepository > rejeita replay quando a reclamacao atomica ja nao devolve linha` excede ocasionalmente os 5 segundos. Não alterei esse teste fora do âmbito da Tarefa 7.
 
 ## Independent review fixes
 

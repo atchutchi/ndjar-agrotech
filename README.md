@@ -15,23 +15,25 @@ The product helps farmers, field teams and agricultural consultants work with so
 7. [Features](#features)
 8. [SEO](#seo)
 9. [Wireframes](#wireframes)
-10. [Testing](#testing)
-11. [Feature Troubleshooting](#feature-troubleshooting)
-12. [Future Development](#future-development)
-13. [Accessibility](#accessibility)
-14. [Deployment](#deployment)
-15. [Credits](#credits)
-16. [Code](#code)
-17. [Storage](#storage)
-18. [Database](#database)
-19. [Languages and Technologies Used](#languages-and-technologies-used)
+10. [Local Setup](#local-setup)
+11. [Testing](#testing)
+12. [Security](#security)
+13. [Feature Troubleshooting](#feature-troubleshooting)
+14. [Future Development](#future-development)
+15. [Accessibility](#accessibility)
+16. [Deployment](#deployment)
+17. [Credits](#credits)
+18. [Code](#code)
+19. [Storage](#storage)
+20. [Database](#database)
+21. [Languages and Technologies Used](#languages-and-technologies-used)
 
 ## Overview
 
 The repository is now a TypeScript monorepo with shared packages and three application foundations:
 
 - `apps/mobile`: Expo React Native Android-first app with bottom tabs, stack-style back navigation, interactive offline pilot map, realistic local image assets, offline fixture snapshot and consultation triage.
-- `apps/web`: Next.js public web and admin placeholder.
+- `apps/web`: Next.js public web and protected admin shell.
 - `apps/api`: NestJS fixture-backed REST API for mobile and web.
 - `packages/domain`: shared agronomic rules, pH classification, consultation escalation, offline and USSD domain logic.
 - `packages/fixtures`: southern pilot seed fixtures with explicit source status.
@@ -56,22 +58,26 @@ Implemented in this branch:
 - Realistic crop image assets for rice, cassava, maize, beans, pumpkin, okra, yam, sweet potato and leafy vegetables, replacing placeholder icons in crop pH cards.
 - Free interactive agricultural calendar extracted from `CALENDARIO AGRICULTURAL.xlsx`, with month selector, crop groups, colour-coded activity cells and incomplete data marked as pending.
 - About page with N'djar mission, values and SDG assets copied from the project material.
-- Next.js public web page, admin placeholder and health route.
+- Next.js public web page, protected admin shell and health route.
 - Initial brand guide, wireframes and reusable design tokens.
 - Playwright added for repeatable web/admin smoke testing.
 - Final production platform specification added at `docs/superpowers/specs/2026-07-10-ndjar-production-platform-design.md`.
 - Orange Money and TeleTaku payment assets added for the next subscription button implementation.
+- Production foundation implementation: authentication schema, API authentication endpoints, `AuthGuard`, `RolesGuard`, protected admin login shell and entitlement endpoint.
+- Secret scanning is active in local checks and GitHub Actions.
 
 Important limitations:
 
-- No production database is connected yet.
+- The PostgreSQL schema is implemented, but no database has been provisioned and no migrations have been applied.
 - The mobile presentation APK uses a pure React Native offline pilot map with public Buba coordinates and estimated community points. This avoids native map crashes in local APK demos. The community geometry is still approximate until validated GPS data is supplied.
 - A production map should use a validated GIS stack such as MapLibre, Mapbox or MapTiler in a development build, with API keys, offline tile strategy and tested Android native configuration.
 - No live USSD short code is connected.
 - No free-form AI advice is enabled.
 - Mobile offline storage is an in-memory foundation for now, not durable device storage.
-- Subscription state is local and simulated. Real authentication, entitlement checks, invoices and mobile money callbacks are still required.
-- Admin has no authentication and no write workflows yet.
+- Authentication, role guards, the protected admin shell and the entitlement endpoint are implemented in code. Real login and real entitlement reads require a provisioned PostgreSQL database with the schema applied.
+- Subscription state in the mobile MVP remains simulated. There are no real payment provider callbacks, invoices or receipt workflows.
+- There is no email or SMS delivery integration, GIS editor, admin CRUD, complete forum backend or complete production query layer yet.
+- External branch protection still needs to require the trusted secret-scan check. The pinned `pre-commit/action` still has mutable transitive dependencies managed by its provider; this risk is recorded without changing the workflow in this task.
 - Full 3D terrain/vector GIS is not in the Expo Go prototype. That likely needs a development build with MapLibre, Mapbox or MapTiler plus validated geodata.
 
 ## Strategy
@@ -110,7 +116,7 @@ The specification covers:
 - push notifications.
 - implementation roadmap and test criteria.
 
-Next implementation should start with authentication, roles, database migrations and protected admin access. Map, forum, payments and Médico Agrícola depend on that foundation.
+The next operational integration work is database provisioning and migrations, followed by the real map, forum, payments and Médico Agrícola workflows. The authentication, roles and protected admin foundation is already implemented in code.
 
 ## User Stories
 
@@ -187,7 +193,7 @@ Implemented foundation:
 - API assistant route with 24-hour escalation.
 - API offline sync route returning pilot fixture data.
 - Web homepage for the N'djar MVP and pilot.
-- Web admin placeholder for future management workflows.
+- Protected web admin shell with future management workflows still marked as planned.
 - Database schema ready for PostGIS and future USSD sessions.
 - Design tokens and brand guide.
 
@@ -244,12 +250,54 @@ Mobile route groups:
 Web route groups:
 
 - `/`: public MVP overview.
-- `/admin`: admin placeholder for future operational modules.
+- `/admin`: protected admin shell; operational CRUD modules remain future work.
 - `/api/health`: web health route.
+
+## Local Setup
+
+Enable the pinned package manager and install the locked workspace dependencies:
+
+```powershell
+corepack enable
+corepack pnpm install --frozen-lockfile
+Copy-Item .env.example .env
+```
+
+The local environment contract is:
+
+```dotenv
+DATABASE_URL=
+NDJAR_DATABASE_MODE=fixture
+JWT_ACCESS_SECRET=
+JWT_REFRESH_SECRET=
+NDJAR_API_URL=http://localhost:3333
+```
+
+`NDJAR_DATABASE_MODE=fixture` lets the API start without a database for fixture-backed routes. Real login and real entitlements require PostgreSQL, a non-empty `DATABASE_URL` and the schema applied.
+
+Keep the JWT fields empty in `.env`. Generate runtime-only secrets in the current PowerShell process. This command uses `RandomNumberGenerator`, does not print a secret and does not write one to disk:
+
+```powershell
+function New-NdjarRuntimeSecret {
+  $bytes = [byte[]]::new(48)
+  [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+  [Convert]::ToBase64String($bytes).TrimEnd("=").Replace("+", "-").Replace("/", "_")
+}
+$env:JWT_ACCESS_SECRET = New-NdjarRuntimeSecret
+$env:JWT_REFRESH_SECRET = New-NdjarRuntimeSecret
+Remove-Item function:New-NdjarRuntimeSecret
+```
+
+Run the API and web applications in separate terminals after setting their required runtime environment:
+
+```powershell
+corepack pnpm --filter @ndjar/api dev
+corepack pnpm --filter @ndjar/web dev
+```
 
 ## Testing
 
-Available commands:
+Repository commands:
 
 ```bash
 pnpm install
@@ -259,16 +307,23 @@ pnpm test
 pnpm build
 ```
 
-Targeted checks:
+Production foundation verification:
 
 ```bash
-pnpm --filter @ndjar/domain test
-pnpm --filter @ndjar/fixtures test
-pnpm --filter @ndjar/database test
-pnpm --filter @ndjar/api test
-pnpm --filter @ndjar/mobile test
-pnpm --filter @ndjar/web test
-pnpm --filter @ndjar/design-system test
+corepack pnpm --filter @ndjar/database test
+corepack pnpm --filter @ndjar/domain test
+corepack pnpm --filter @ndjar/api test
+corepack pnpm --filter @ndjar/web test
+corepack pnpm --filter @ndjar/database typecheck
+corepack pnpm --filter @ndjar/domain typecheck
+corepack pnpm --filter @ndjar/api typecheck
+corepack pnpm --filter @ndjar/web typecheck
+corepack pnpm --filter @ndjar/api lint
+corepack pnpm --filter @ndjar/web lint
+corepack pnpm --filter @ndjar/api build
+corepack pnpm --filter @ndjar/web build
+git diff --check
+py -m pre_commit run detect-secrets --all-files
 ```
 
 Mobile Expo validation:
@@ -311,6 +366,12 @@ The highest-risk tests protect:
 - Database seed mapping.
 - Mobile doctor safety.
 - Design pH token alignment with domain rules.
+
+## Security
+
+Secret scanning is active through `detect-secrets` locally and in GitHub Actions. Do not add real credentials, fixed example passwords or generated JWT values to tracked files. GitGuardian remains an external independent check.
+
+The trusted secret-scan workflow is designed to read its configuration from the protected base branch. Branch protection is an external repository setting and still needs to require that check and CODEOWNERS review. The pinned `pre-commit/action` has transitive dependencies that remain mutable at the provider layer. This is a recorded supply-chain concern; the workflow is not restructured here.
 
 ## Feature Troubleshooting
 
