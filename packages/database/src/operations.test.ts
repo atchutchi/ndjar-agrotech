@@ -20,6 +20,7 @@ describe("database operations", () => {
       "db:migrate": "drizzle-kit migrate",
     });
     expect(apiPackageJson.scripts).toMatchObject({
+      "db:create-local-admin": "tsx src/database/create-local-admin.ts",
       "db:seed": "tsx src/database/run-seed.ts",
     });
   });
