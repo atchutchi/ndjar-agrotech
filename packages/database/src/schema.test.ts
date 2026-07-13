@@ -12,9 +12,14 @@ import {
   authRateLimits,
   calendarTasks,
   communities,
+  communityGroupMembers,
+  communityGroups,
   consultationResponses,
+  cropAgronomicNotes,
   cropPresence,
   cropPresenceGroupObservations,
+  cropProductionEvidence,
+  crops,
   entitlements,
   paymentAttempts,
   plans,
@@ -162,6 +167,24 @@ describe("production auth schema", () => {
 
   it("uses user_roles as the only persisted role authority", () => {
     expect(users).not.toHaveProperty("role");
+  });
+
+  it("marks every operational seed table as active or retired", () => {
+    expect(
+      [
+        regions,
+        communityGroups,
+        communities,
+        communityGroupMembers,
+        crops,
+        cropPresenceGroupObservations,
+        cropPresence,
+        cropProductionEvidence,
+        cropAgronomicNotes,
+        soilSamples,
+        calendarTasks,
+      ].every((table) => table.active.notNull),
+    ).toBe(true);
   });
 
   it("indexa pesquisas operacionais de autenticacao", () => {

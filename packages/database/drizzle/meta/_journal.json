@@ -92,6 +92,13 @@
       "when": 1783957897294,
       "tag": "0012_subscription_user_overlap",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1783981089817,
+      "tag": "0013_seed_operational_retirement",
+      "breakpoints": true
     }
   ]
 }

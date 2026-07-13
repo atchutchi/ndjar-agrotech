@@ -275,6 +275,7 @@ export const users = pgTable("users", {
 
 export const regions = pgTable("regions", {
   id: text("id").primaryKey(),
+  active: boolean("active").default(true).notNull(),
   regionName: text("region_name").notNull(),
   sectorName: text("sector_name").notNull(),
   sourceStatus: sourceStatusEnum("source_status").notNull(),
@@ -289,6 +290,7 @@ export const regions = pgTable("regions", {
 
 export const communityGroups = pgTable("community_groups", {
   id: text("id").primaryKey(),
+  active: boolean("active").default(true).notNull(),
   regionId: text("region_id")
     .notNull()
     .references(() => regions.id),
@@ -306,6 +308,7 @@ export const communityGroups = pgTable("community_groups", {
 
 export const communities = pgTable("communities", {
   id: text("id").primaryKey(),
+  active: boolean("active").default(true).notNull(),
   regionId: text("region_id")
     .notNull()
     .references(() => regions.id),
@@ -332,6 +335,7 @@ export const communities = pgTable("communities", {
 
 export const communityGroupMembers = pgTable("community_group_members", {
   id: text("id").primaryKey(),
+  active: boolean("active").default(true).notNull(),
   groupId: text("group_id")
     .notNull()
     .references(() => communityGroups.id),
@@ -345,6 +349,7 @@ export const communityGroupMembers = pgTable("community_group_members", {
 
 export const crops = pgTable("crops", {
   id: text("id").primaryKey(),
+  active: boolean("active").default(true).notNull(),
   label: text("label").notNull(),
   sourceStatus: sourceStatusEnum("source_status").notNull(),
   sourceId: agronomicSourceColumn(),
@@ -356,6 +361,7 @@ export const cropPresenceGroupObservations = pgTable(
   "crop_presence_group_observations",
   {
     id: text("id").primaryKey(),
+    active: boolean("active").default(true).notNull(),
     cropId: text("crop_id")
       .notNull()
       .references(() => crops.id),
@@ -373,6 +379,7 @@ export const cropPresence = pgTable(
   "crop_presence",
   {
     id: text("id").primaryKey(),
+    active: boolean("active").default(true).notNull(),
     cropId: text("crop_id")
       .notNull()
       .references(() => crops.id),
@@ -398,6 +405,7 @@ export const cropPresence = pgTable(
 
 export const cropProductionEvidence = pgTable("crop_production_evidence", {
   id: text("id").primaryKey(),
+  active: boolean("active").default(true).notNull(),
   cropId: text("crop_id")
     .notNull()
     .references(() => crops.id),
@@ -412,6 +420,7 @@ export const cropProductionEvidence = pgTable("crop_production_evidence", {
 
 export const cropAgronomicNotes = pgTable("crop_agronomic_notes", {
   id: text("id").primaryKey(),
+  active: boolean("active").default(true).notNull(),
   cropId: text("crop_id")
     .notNull()
     .references(() => crops.id),
@@ -426,6 +435,7 @@ export const soilSamples = pgTable(
   "soil_samples",
   {
     id: text("id").primaryKey(),
+    active: boolean("active").default(true).notNull(),
     regionId: text("region_id").references(() => regions.id),
     communityId: text("community_id").references(() => communities.id),
     ph: doublePrecision("ph"),
@@ -472,6 +482,7 @@ export const soilSamples = pgTable(
 
 export const calendarTasks = pgTable("calendar_tasks", {
   id: text("id").primaryKey(),
+  active: boolean("active").default(true).notNull(),
   regionId: text("region_id").references(() => regions.id),
   cropId: text("crop_id").references(() => crops.id),
   month: monthEnum("month").notNull(),

@@ -50,7 +50,7 @@ interface SeedTombstoneRecord extends SeedTombstoneDeclaration {
 }
 
 interface SeedRetirementOperations {
-  deleteEntities(
+  retireEntities(
     entityType: SeedOperationalEntityType,
     entityIds: readonly string[],
   ): Promise<readonly string[]>;
@@ -213,12 +213,12 @@ export async function retireSeedEntities(
       continue;
     }
 
-    const deletedIds = await operations.deleteEntities(entityType, entityIds);
-    const deletedSet = new Set(deletedIds);
-    const missingId = entityIds.find((entityId) => !deletedSet.has(entityId));
-    if (missingId || deletedSet.size !== entityIds.length) {
+    const retiredIds = await operations.retireEntities(entityType, entityIds);
+    const retiredSet = new Set(retiredIds);
+    const missingId = entityIds.find((entityId) => !retiredSet.has(entityId));
+    if (missingId || retiredSet.size !== entityIds.length) {
       throw new Error(
-        `A retirada de ${entityType} nao removeu exactamente os IDs declarados no manifesto.`,
+        `A retirada de ${entityType} nao marcou exactamente os IDs declarados como inactivos.`,
       );
     }
   }
@@ -232,7 +232,7 @@ export async function retireSeedEntities(
   );
 }
 
-async function deleteOperationalSeedEntities(
+async function retireOperationalSeedEntities(
   tx: DatabaseTransaction,
   entityType: SeedOperationalEntityType,
   entityIds: readonly string[],
@@ -241,77 +241,88 @@ async function deleteOperationalSeedEntities(
     case "calendarTasks":
       return (
         await tx
-          .delete(calendarTasks)
+          .update(calendarTasks)
+          .set({ active: false, updatedAt: new Date() })
           .where(inArray(calendarTasks.id, entityIds))
           .returning({ id: calendarTasks.id })
       ).map((record) => record.id);
     case "soilSamples":
       return (
         await tx
-          .delete(soilSamples)
+          .update(soilSamples)
+          .set({ active: false, updatedAt: new Date() })
           .where(inArray(soilSamples.id, entityIds))
           .returning({ id: soilSamples.id })
       ).map((record) => record.id);
     case "cropAgronomicNotes":
       return (
         await tx
-          .delete(cropAgronomicNotes)
+          .update(cropAgronomicNotes)
+          .set({ active: false, updatedAt: new Date() })
           .where(inArray(cropAgronomicNotes.id, entityIds))
           .returning({ id: cropAgronomicNotes.id })
       ).map((record) => record.id);
     case "cropProductionEvidence":
       return (
         await tx
-          .delete(cropProductionEvidence)
+          .update(cropProductionEvidence)
+          .set({ active: false, updatedAt: new Date() })
           .where(inArray(cropProductionEvidence.id, entityIds))
           .returning({ id: cropProductionEvidence.id })
       ).map((record) => record.id);
     case "cropPresence":
       return (
         await tx
-          .delete(cropPresence)
+          .update(cropPresence)
+          .set({ active: false, updatedAt: new Date() })
           .where(inArray(cropPresence.id, entityIds))
           .returning({ id: cropPresence.id })
       ).map((record) => record.id);
     case "cropPresenceGroupObservations":
       return (
         await tx
-          .delete(cropPresenceGroupObservations)
+          .update(cropPresenceGroupObservations)
+          .set({ active: false, updatedAt: new Date() })
           .where(inArray(cropPresenceGroupObservations.id, entityIds))
           .returning({ id: cropPresenceGroupObservations.id })
       ).map((record) => record.id);
     case "communityGroupMembers":
       return (
         await tx
-          .delete(communityGroupMembers)
+          .update(communityGroupMembers)
+          .set({ active: false, updatedAt: new Date() })
           .where(inArray(communityGroupMembers.id, entityIds))
           .returning({ id: communityGroupMembers.id })
       ).map((record) => record.id);
     case "communities":
       return (
         await tx
-          .delete(communities)
+          .update(communities)
+          .set({ active: false, updatedAt: new Date() })
           .where(inArray(communities.id, entityIds))
           .returning({ id: communities.id })
       ).map((record) => record.id);
     case "communityGroups":
       return (
         await tx
-          .delete(communityGroups)
+          .update(communityGroups)
+          .set({ active: false, updatedAt: new Date() })
           .where(inArray(communityGroups.id, entityIds))
           .returning({ id: communityGroups.id })
       ).map((record) => record.id);
     case "crops":
       return (
         await tx
-          .delete(crops)
+          .update(crops)
+          .set({ active: false, updatedAt: new Date() })
           .where(inArray(crops.id, entityIds))
           .returning({ id: crops.id })
       ).map((record) => record.id);
     case "regions":
       return (
         await tx
-          .delete(regions)
+          .update(regions)
+          .set({ active: false, updatedAt: new Date() })
           .where(inArray(regions.id, entityIds))
           .returning({ id: regions.id })
       ).map((record) => record.id);
@@ -470,8 +481,8 @@ export async function seedPilotDatabase(
 
     if (tombstones.length > 0) {
       await retireSeedEntities(tombstones, manifest, {
-        deleteEntities: (entityType, entityIds) =>
-          deleteOperationalSeedEntities(tx, entityType, entityIds),
+        retireEntities: (entityType, entityIds) =>
+          retireOperationalSeedEntities(tx, entityType, entityIds),
         recordTombstones: async (records) => {
           await tx.insert(seedTombstones).values([...records]);
         },

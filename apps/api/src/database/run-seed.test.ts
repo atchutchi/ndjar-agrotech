@@ -110,10 +110,13 @@ describe("reconcileSeedTombstones", () => {
 });
 
 describe("retireSeedEntities", () => {
-  it("removes baseline data in dependency order and keeps an audit tombstone", async () => {
+  it("retires baseline data in dependency order and keeps an audit tombstone", async () => {
     const operational = new Map([
-      ["cropPresence", new Set(["mandioca:sare-donha-1"])],
-      ["crops", new Set(["arroz", "mandioca"])],
+      [
+        "communities",
+        new Map([["sare-donha-1", { active: true, referenced: true }]]),
+      ],
+      ["crops", new Map([["mandioca", { active: true, referenced: false }]])],
     ]);
     const audit: Array<{
       entityId: string;
@@ -121,22 +124,25 @@ describe("retireSeedEntities", () => {
       removedInVersion: number;
       seedKey: string;
     }> = [];
-    const deletionOrder: string[] = [];
+    const retirementOrder: string[] = [];
 
     await retireSeedEntities(
       [
-        {
-          entityId: "mandioca:sare-donha-1",
-          entityType: "cropPresence",
-        },
+        { entityId: "sare-donha-1", entityType: "communities" },
         { entityId: "mandioca", entityType: "crops" },
       ],
       { key: "pilot-south", version: 2 },
       {
-        deleteEntities: async (entityType, entityIds) => {
-          deletionOrder.push(entityType);
+        retireEntities: async (entityType, entityIds) => {
+          retirementOrder.push(entityType);
           const records = operational.get(entityType);
-          return entityIds.filter((entityId) => records?.delete(entityId));
+          for (const entityId of entityIds) {
+            const record = records?.get(entityId);
+            if (record) {
+              record.active = false;
+            }
+          }
+          return entityIds;
         },
         recordTombstones: async (records) => {
           audit.push(...records);
@@ -144,8 +150,15 @@ describe("retireSeedEntities", () => {
       },
     );
 
-    expect(deletionOrder).toEqual(["cropPresence", "crops"]);
-    expect(operational.get("crops")).not.toContain("mandioca");
+    expect(retirementOrder).toEqual(["communities", "crops"]);
+    expect(operational.get("crops")?.get("mandioca")).toEqual({
+      active: false,
+      referenced: false,
+    });
+    expect(operational.get("communities")?.get("sare-donha-1")).toEqual({
+      active: false,
+      referenced: true,
+    });
     expect(audit).toContainEqual({
       entityId: "mandioca",
       entityType: "crops",
@@ -155,23 +168,23 @@ describe("retireSeedEntities", () => {
   });
 
   it("rejects non-operational and user-owned entity types", async () => {
-    const deleteEntities = vi.fn();
+    const retireEntities = vi.fn();
 
     await expect(
       retireSeedEntities(
         [{ entityId: "source-v1", entityType: "agronomicSources" }],
         { key: "pilot-south", version: 2 },
-        { deleteEntities, recordTombstones: vi.fn() },
+        { retireEntities, recordTombstones: vi.fn() },
       ),
     ).rejects.toThrow("nao pode ser retirado");
     await expect(
       retireSeedEntities(
         [{ entityId: "user-1", entityType: "users" }],
         { key: "pilot-south", version: 2 },
-        { deleteEntities, recordTombstones: vi.fn() },
+        { retireEntities, recordTombstones: vi.fn() },
       ),
     ).rejects.toThrow("nao pode ser retirado");
-    expect(deleteEntities).not.toHaveBeenCalled();
+    expect(retireEntities).not.toHaveBeenCalled();
   });
 });
 

@@ -293,6 +293,8 @@ describe("database operations", () => {
     );
     expect(runner).toContain("reconcileSeedTombstones");
     expect(runner).toContain("retireSeedEntities");
+    expect(runner).toContain("active: false");
+    expect(runner).not.toContain(".delete(");
     expect(runner).not.toMatch(
       /\.delete\((users|userProfiles|consultations|consultationResponses)\)/,
     );
@@ -301,6 +303,39 @@ describe("database operations", () => {
       runner.indexOf(".insert(seedManifests)"),
     );
     expect(tombstoneInsert).not.toContain("onConflictDoNothing");
+    expect(runner.indexOf("await database.transaction")).toBeLessThan(
+      runner.indexOf("await retireSeedEntities"),
+    );
+    expect(runner.indexOf("await retireSeedEntities")).toBeLessThan(
+      runner.indexOf(".insert(seedManifests)"),
+    );
+  });
+
+  it("adds active retirement state to every operational seed table", () => {
+    const migration = readFileSync(
+      resolve(
+        import.meta.dirname,
+        "../drizzle/0013_seed_operational_retirement.sql",
+      ),
+      "utf8",
+    );
+    for (const table of [
+      "regions",
+      "community_groups",
+      "communities",
+      "community_group_members",
+      "crops",
+      "crop_presence_group_observations",
+      "crop_presence",
+      "crop_production_evidence",
+      "crop_agronomic_notes",
+      "soil_samples",
+      "calendar_tasks",
+    ]) {
+      expect(migration).toContain(
+        `ALTER TABLE "${table}" ADD COLUMN "active" boolean DEFAULT true NOT NULL`,
+      );
+    }
   });
 
   it("drops the unused legacy user role enum incrementally", () => {
