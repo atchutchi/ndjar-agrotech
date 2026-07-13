@@ -116,6 +116,17 @@ main {
   padding: 0 16px;
 }
 
+.admin-logout {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--brand-dark);
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 42px;
+  padding: 0 16px;
+}
+
 .operations-grid {
   display: grid;
   gap: 18px;
@@ -473,6 +484,57 @@ address span {
 
 .admin-shell {
   padding-top: 20px;
+}
+
+.admin-login {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.admin-login-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 460px;
+  padding: 28px;
+  width: 100%;
+}
+
+.admin-login-panel form {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-login-panel label {
+  color: var(--text-primary);
+  display: grid;
+  font-size: 14px;
+  font-weight: 800;
+  gap: 8px;
+}
+
+.admin-login-panel input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.admin-login-panel button {
+  background: var(--brand-primary);
+  border: 0;
+  border-radius: 8px;
+  color: var(--surface);
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 44px;
 }
 
 .admin-nav {

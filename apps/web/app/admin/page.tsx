@@ -62,18 +62,22 @@ export default function AdminPage() {
           <span>N'djar Admin</span>
         </Link>
         <Link className="admin-link" href="/">
-          Overview público
+          Visão geral pública
         </Link>
+        <form action="/api/admin/logout" method="post">
+          <button className="admin-logout" type="submit">
+            Sair
+          </button>
+        </form>
       </nav>
 
       <section className="admin-header" aria-labelledby="admin-title">
         <div>
           <p className="eyebrow">Entrada administrativa</p>
-          <h1 id="admin-title">Módulos futuros do backoffice N'djar.</h1>
+          <h1 id="admin-title">Painel operacional N'djar</h1>
           <p>
-            Este placeholder marca a superfície de administração do MVP. Não há
-            autenticação, escrita em base de dados ou contas externas nesta
-            fase.
+            Área protegida para gerir utilizadores, subscrições, mapa agrícola,
+            culturas, fórum, consultas e notificações.
           </p>
         </div>
         <div className="admin-status">
