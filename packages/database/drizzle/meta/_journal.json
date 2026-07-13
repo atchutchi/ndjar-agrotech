@@ -36,6 +36,13 @@
       "when": 1783953631461,
       "tag": "0004_identity_refresh_integrity",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783953857912,
+      "tag": "0005_seed_manifests",
+      "breakpoints": true
     }
   ]
 }

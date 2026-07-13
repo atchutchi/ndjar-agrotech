@@ -145,4 +145,16 @@ describe("database operations", () => {
     expect(normalizeFamilies).toBeLessThan(familyForeignKey);
     expect(familyUnique).toBeLessThan(parentFamilyForeignKey);
   });
+
+  it("migrates versioned seed manifests", () => {
+    const migration = readFileSync(
+      resolve(import.meta.dirname, "../drizzle/0005_seed_manifests.sql"),
+      "utf8",
+    );
+
+    expect(migration).toContain('CREATE TABLE "seed_manifests"');
+    expect(migration).toContain('"key" text PRIMARY KEY NOT NULL');
+    expect(migration).toContain('"version" integer NOT NULL');
+    expect(migration).toContain('"content_hash" text NOT NULL');
+  });
 });

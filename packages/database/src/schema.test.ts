@@ -19,6 +19,7 @@ import {
   refreshTokens,
   regions,
   roles,
+  seedManifests,
   soilSamples,
   sourceStatusEnum,
   subscriptions,
@@ -201,6 +202,12 @@ describe("production auth schema", () => {
         ),
       ),
     ).toBe(true);
+  });
+
+  it("persiste manifestos versionados para seeds reproduziveis", () => {
+    expect(seedManifests.key.primary).toBe(true);
+    expect(seedManifests.version.notNull).toBe(true);
+    expect(seedManifests.contentHash.notNull).toBe(true);
   });
 
   it("impede entitlements de apontarem para subscricoes de outro utilizador", () => {

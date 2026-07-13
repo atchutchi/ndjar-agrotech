@@ -3,6 +3,7 @@ import {
   pilotCrops,
   pilotSouthRegions,
 } from "@ndjar/fixtures";
+import { createHash } from "node:crypto";
 
 import {
   agronomicSources,
@@ -270,6 +271,14 @@ export const pilotSeedData = {
   cropAgronomicNotes: seedCropAgronomicNotes,
   soilSamples: seedSoilSamples,
   calendarTasks: seedCalendarTasks,
+} as const;
+
+export const pilotSeedManifest = {
+  contentHash: createHash("sha256")
+    .update(JSON.stringify(pilotSeedData))
+    .digest("hex"),
+  key: "pilot-south",
+  version: 1,
 } as const;
 
 export const PILOT_SEED_ORDER = [

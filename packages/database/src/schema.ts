@@ -207,6 +207,26 @@ export const agronomicSources = pgTable(
   ],
 );
 
+export const seedManifests = pgTable(
+  "seed_manifests",
+  {
+    key: text("key").primaryKey(),
+    version: integer("version").notNull(),
+    contentHash: text("content_hash").notNull(),
+    appliedAt: timestamp("applied_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    ...timestampColumns(),
+  },
+  (table) => [
+    check("seed_manifests_version_positive", sql`${table.version} >= 1`),
+    check(
+      "seed_manifests_content_hash_format",
+      sql`${table.contentHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+  ],
+);
+
 function agronomicSourceColumn() {
   return text("source_id")
     .notNull()

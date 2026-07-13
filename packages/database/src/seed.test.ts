@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   PILOT_SEED_ORDER,
+  pilotSeedManifest,
+  seedAgronomicSources,
   seedCalendarTasks,
   seedCommunities,
   seedCommunityGroups,
@@ -19,6 +21,16 @@ import {
 } from "./seed.js";
 
 describe("database seed data", () => {
+  it("identifies immutable source versions and hashes the complete seed", () => {
+    expect(pilotSeedManifest.version).toBeGreaterThan(0);
+    expect(pilotSeedManifest.contentHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(
+      seedAgronomicSources.every((source) =>
+        source.id.endsWith(`-v${source.version}`),
+      ),
+    ).toBe(true);
+  });
+
   it("orders parent tables before dependent records", () => {
     expect(PILOT_SEED_ORDER.indexOf("communities")).toBeLessThan(
       PILOT_SEED_ORDER.indexOf("communityGroupMembers"),
