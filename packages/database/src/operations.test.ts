@@ -253,6 +253,18 @@ describe("database operations", () => {
     expect(runner).not.toContain(".delete(");
   });
 
+  it("drops the unused legacy user role enum incrementally", () => {
+    const migration = readFileSync(
+      resolve(
+        import.meta.dirname,
+        "../drizzle/0010_drop_legacy_user_role_enum.sql",
+      ),
+      "utf8",
+    );
+
+    expect(migration).toContain('DROP TYPE IF EXISTS "public"."user_role"');
+  });
+
   it("migrates versioned seed manifests", () => {
     const migration = readFileSync(
       resolve(import.meta.dirname, "../drizzle/0005_seed_manifests.sql"),

@@ -2,6 +2,8 @@ import { AGRONOMIC_SOURCE_STATUSES } from "@ndjar/domain";
 import { getTableConfig, PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 
+import * as databaseSchema from "./schema.js";
+
 import {
   auditLogs,
   answerTemplates,
@@ -26,7 +28,6 @@ import {
   subscriptions,
   ussdSessions,
   userProfiles,
-  userRoleEnum,
   userRoles,
   users,
   verificationCodes,
@@ -68,13 +69,8 @@ describe("production auth schema", () => {
     expect(userRoles).toBeDefined();
   });
 
-  it("alinha todos os papeis do dominio com o enum persistido", () => {
-    expect(userRoleEnum.enumValues).toEqual([
-      "farmer",
-      "agricultural_doctor",
-      "admin",
-      "super_admin",
-    ]);
+  it("uses user_roles without retaining the legacy role enum", () => {
+    expect(databaseSchema).not.toHaveProperty("userRoleEnum");
   });
 
   it("exports subscription and payment primitives", () => {

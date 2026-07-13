@@ -22,12 +22,6 @@ export const sourceStatusEnum = pgEnum(
   AGRONOMIC_SOURCE_STATUSES,
 );
 
-export const userRoleEnum = pgEnum("user_role", [
-  "farmer",
-  "agricultural_doctor",
-  "admin",
-  "super_admin",
-]);
 export const userChannelEnum = pgEnum("user_channel", [
   "mobile",
   "web",

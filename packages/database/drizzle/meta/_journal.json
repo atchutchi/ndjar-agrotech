@@ -71,6 +71,13 @@
       "when": 1783956733273,
       "tag": "0009_seed_tombstones",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783956974508,
+      "tag": "0010_drop_legacy_user_role_enum",
+      "breakpoints": true
     }
   ]
 }
