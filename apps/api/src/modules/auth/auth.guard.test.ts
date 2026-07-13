@@ -1,5 +1,6 @@
 import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import type { Reflector } from "@nestjs/core";
+import { randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { AuthGuard } from "./auth.guard.js";
@@ -8,7 +9,7 @@ import { ROLES_KEY, Roles, RolesGuard } from "./roles.guard.js";
 
 describe("AuthGuard", () => {
   beforeEach(() => {
-    process.env.JWT_ACCESS_SECRET = "test-access-secret";
+    process.env.JWT_ACCESS_SECRET = randomBytes(48).toString("base64url");
   });
 
   it("preenche o utilizador a partir de um Bearer JWT valido", async () => {

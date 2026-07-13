@@ -1,5 +1,6 @@
 import { hash } from "argon2";
 import { PgDialect } from "drizzle-orm/pg-core";
+import { randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -49,7 +50,7 @@ function repositoryWithTransaction(tx: unknown) {
 }
 
 const validRefreshTokenSelector = "01234567-89ab-4cde-8f01-23456789abcd";
-const validRefreshTokenSecret = "A".repeat(64);
+const validRefreshTokenSecret = randomBytes(48).toString("base64url");
 const validRefreshToken = `${validRefreshTokenSelector}.${validRefreshTokenSecret}`;
 
 describe("AuthRepository refresh tokens", () => {
@@ -117,7 +118,7 @@ describe("AuthRepository refresh tokens", () => {
         defaultRole: "farmer",
         displayName: "Binta Cisse",
         id: "user-1",
-        passwordHash: "password-hash",
+        passwordHash: await hash(randomBytes(32).toString("base64url")),
         refreshTokenHash: await hash(validRefreshTokenSecret),
         refreshTokenId: validRefreshTokenSelector,
         roleId: "farmer",
@@ -145,7 +146,7 @@ describe("AuthRepository refresh tokens", () => {
         defaultRole: "farmer",
         displayName: "Binta Cisse",
         id: "user-1",
-        passwordHash: "password-hash",
+        passwordHash: await hash(randomBytes(32).toString("base64url")),
         refreshTokenHash: await hash(validRefreshTokenSecret),
         refreshTokenId: validRefreshTokenSelector,
         roleId: "farmer",
@@ -230,7 +231,7 @@ describe("AuthRepository verification codes", () => {
     vi.spyOn(repository, "findByIdentifierHash").mockResolvedValue({
       displayName: "Binta Cisse",
       id: "user-1",
-      passwordHash: "password-hash",
+      passwordHash: await hash(randomBytes(32).toString("base64url")),
       roles: ["farmer"],
     });
 
@@ -272,7 +273,7 @@ describe("AuthRepository verification codes", () => {
       repositoryWithTransaction(tx).resetPassword({
         code: "123456",
         identifierHash: "identifier-hash",
-        passwordHash: "new-password-hash",
+        passwordHash: await hash(randomBytes(32).toString("base64url")),
       }),
     ).resolves.toBe(true);
 
@@ -299,7 +300,7 @@ describe("AuthRepository verification codes", () => {
       repositoryWithTransaction(tx).resetPassword({
         code: "000000",
         identifierHash: "identifier-hash",
-        passwordHash: "new-password-hash",
+        passwordHash: await hash(randomBytes(32).toString("base64url")),
       }),
     ).resolves.toBe(false);
 

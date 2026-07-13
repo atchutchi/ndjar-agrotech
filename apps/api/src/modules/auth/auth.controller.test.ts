@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing";
+import { randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthController } from "./auth.controller.js";
@@ -14,6 +15,14 @@ const authService = {
   resetPassword: vi.fn(),
   verify: vi.fn(),
 };
+
+const testPassword = randomBytes(32).toString("base64url");
+const testNewPassword = randomBytes(32).toString("base64url");
+const invalidPassword = randomBytes(4).toString("hex");
+const testAccessToken = randomBytes(32).toString("base64url");
+const testRefreshToken = randomBytes(32).toString("base64url");
+const testRenewedAccessToken = randomBytes(32).toString("base64url");
+const testRenewedRefreshToken = randomBytes(32).toString("base64url");
 
 async function createController() {
   const module = await Test.createTestingModule({
@@ -40,7 +49,7 @@ describe("AuthController", () => {
     await expect(
       controller.register({
         displayName: "Binta Cisse",
-        password: "senha-segura-123",
+        password: testPassword,
         phone: "+245956086144",
       }),
     ).resolves.toEqual({
@@ -49,7 +58,7 @@ describe("AuthController", () => {
     });
     expect(authService.register).toHaveBeenCalledWith({
       displayName: "Binta Cisse",
-      password: "senha-segura-123",
+      password: testPassword,
       phone: "+245956086144",
     });
   });
@@ -60,7 +69,7 @@ describe("AuthController", () => {
     expect(() =>
       controller.register({
         displayName: "B",
-        password: "curta",
+        password: invalidPassword,
         phone: "1",
       }),
     ).toThrow();
@@ -92,8 +101,8 @@ describe("AuthController", () => {
 
   it("inicia sessao", async () => {
     authService.login.mockResolvedValue({
-      accessToken: "access-token",
-      refreshToken: "refresh-token",
+      accessToken: testAccessToken,
+      refreshToken: testRefreshToken,
       user: {
         displayName: "Binta Cisse",
         id: "user-1",
@@ -105,11 +114,11 @@ describe("AuthController", () => {
     await expect(
       controller.login({
         identifier: "+245956086144",
-        password: "senha-segura-123",
+        password: testPassword,
       }),
     ).resolves.toMatchObject({
-      accessToken: "access-token",
-      refreshToken: "refresh-token",
+      accessToken: testAccessToken,
+      refreshToken: testRefreshToken,
       user: {
         id: "user-1",
         roles: ["farmer"],
@@ -117,7 +126,7 @@ describe("AuthController", () => {
     });
     expect(authService.login).toHaveBeenCalledWith({
       identifier: "+245956086144",
-      password: "senha-segura-123",
+      password: testPassword,
     });
   });
 
@@ -125,15 +134,15 @@ describe("AuthController", () => {
     const controller = await createController();
 
     expect(() =>
-      controller.login({ identifier: "ab", password: "curta" }),
+      controller.login({ identifier: "ab", password: invalidPassword }),
     ).toThrow();
     expect(authService.login).not.toHaveBeenCalled();
   });
 
   it("renova uma sessao", async () => {
     authService.refresh.mockResolvedValue({
-      accessToken: "new-access-token",
-      refreshToken: "new-refresh-token",
+      accessToken: testRenewedAccessToken,
+      refreshToken: testRenewedRefreshToken,
       user: {
         displayName: "Binta Cisse",
         id: "user-1",
@@ -144,14 +153,14 @@ describe("AuthController", () => {
 
     await expect(
       controller.refresh({
-        refreshToken: "refresh-token-with-enough-length",
+        refreshToken: testRefreshToken,
       }),
     ).resolves.toMatchObject({
-      accessToken: "new-access-token",
-      refreshToken: "new-refresh-token",
+      accessToken: testRenewedAccessToken,
+      refreshToken: testRenewedRefreshToken,
     });
     expect(authService.refresh).toHaveBeenCalledWith({
-      refreshToken: "refresh-token-with-enough-length",
+      refreshToken: testRefreshToken,
     });
   });
 
@@ -189,13 +198,13 @@ describe("AuthController", () => {
       controller.resetPassword({
         code: "123456",
         identifier: "+245956086144",
-        newPassword: "nova-senha-segura-123",
+        newPassword: testNewPassword,
       }),
     ).resolves.toEqual({ passwordReset: true });
     expect(authService.resetPassword).toHaveBeenCalledWith({
       code: "123456",
       identifier: "+245956086144",
-      newPassword: "nova-senha-segura-123",
+      newPassword: testNewPassword,
     });
   });
 
@@ -206,7 +215,7 @@ describe("AuthController", () => {
       controller.resetPassword({
         code: "1",
         identifier: "ab",
-        newPassword: "curta",
+        newPassword: invalidPassword,
       }),
     ).toThrow();
     expect(authService.resetPassword).not.toHaveBeenCalled();
@@ -235,11 +244,11 @@ describe("AuthController", () => {
 
     await expect(
       controller.logout({
-        refreshToken: "refresh-token-with-enough-length",
+        refreshToken: testRefreshToken,
       }),
     ).resolves.toEqual({ loggedOut: true });
     expect(authService.logout).toHaveBeenCalledWith({
-      refreshToken: "refresh-token-with-enough-length",
+      refreshToken: testRefreshToken,
     });
   });
 

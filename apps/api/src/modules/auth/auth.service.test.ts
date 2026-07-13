@@ -1,4 +1,5 @@
 import { ConflictException } from "@nestjs/common";
+import { randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthRepository } from "./auth.repository.js";
@@ -16,6 +17,8 @@ const repository = {
   consumeAccountVerification: vi.fn(),
 };
 
+const testPassword = randomBytes(32).toString("base64url");
+
 function createService() {
   return new AuthService(repository as unknown as AuthRepository);
 }
@@ -31,7 +34,7 @@ describe("AuthService", () => {
     await createService().register({
       displayName: "Binta Cisse",
       email: "binta@example.com",
-      password: "senha-segura-123",
+      password: testPassword,
       phone: "+245956086144",
     });
 
@@ -48,7 +51,7 @@ describe("AuthService", () => {
     await expect(
       createService().register({
         displayName: "Binta Cisse",
-        password: "senha-segura-123",
+        password: testPassword,
         phone: "+245956086144",
       }),
     ).rejects.toThrow(ConflictException);
@@ -61,7 +64,7 @@ describe("AuthService", () => {
     await expect(
       createService().register({
         displayName: "Binta Cisse",
-        password: "senha-segura-123",
+        password: testPassword,
         phone: "+245956086144",
       }),
     ).rejects.toBe(error);
